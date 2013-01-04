@@ -1,3 +1,5 @@
+tolerance = 1e-15
+
 """
 A 2D point.
 """
@@ -32,6 +34,14 @@ class Point:
         self._x = float( x )
         self._y = float( y )
         
+    def translate(self, dx, dy = None):
+        """ Translate this point by a vector """
+        if isinstance(dx, Point):
+            self += dx
+        else:
+            self._x += float( dx )
+            self._y += float( dy )
+        
     def __eq__(self, other):
         """ Comparison == """
         if isinstance(other, Point):
@@ -45,11 +55,15 @@ class Point:
             return result
         return not result
     
-    def isNear(self, other, xtolerance = 1e-15, ytolerance = None):
+    def isNear(self, other, xtolerance = tolerance, ytolerance = None):
         """ For approximate comparissons """
         if ytolerance == None:
             ytolerance = xtolerance
         return abs(self._x - other._x) <= xtolerance and abs(self._y - other._y) <= ytolerance 
+    
+    def isNearZero(self, xtolerance = tolerance, ytolerance = None):
+        """ Check if this point is near (0,0) """
+        return self.isNear(Point(), xtolerance, ytolerance)
     
     def __str__(self):
         """ Convert to string (print) """

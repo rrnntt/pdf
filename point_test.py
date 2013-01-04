@@ -51,6 +51,15 @@ class TestPoint(unittest.TestCase):
         self.assertFalse(Point(1,2).isNear(Point(1.0, 2.0+1e-14)))
         self.assertFalse(Point(1,2).isNear(Point(1.0+1e-14, 2.0+1e-14)))
         
+    def test_isNearZero(self):
+        self.assertTrue(Point().isNearZero())
+        self.assertTrue(Point(1e-16,0).isNearZero())
+        self.assertTrue(Point(0,1e-16).isNearZero())
+        self.assertTrue(Point(1e-16,1e-16).isNearZero())
+        self.assertFalse(Point(1e-14,0).isNearZero())
+        self.assertFalse(Point(0,1e-14).isNearZero())
+        self.assertFalse(Point(1e-14,1e-14).isNearZero())
+        
     def test_x_y(self):
         p = Point(1.2, 2.3)
         self.assertEqual(p.x(), 1.2)
@@ -121,4 +130,10 @@ class TestPoint(unittest.TestCase):
         p1 -= Point(0.2,0.3)
         self.assertTrue(p1.isNear(Point(1,2)))
         
+    def test_translate(self):
+        p = Point(1,2)
+        p.translate(0.1, -0.2)
+        self.assertTrue( p.isNear(Point(1.1,1.8)) )
+        p.translate( Point(-1,2) )
+        self.assertTrue( p.isNear(Point(0.1,3.8)) )
         
