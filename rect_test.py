@@ -69,4 +69,28 @@ class TestRect(unittest.TestCase):
         self.assertEquals( r.xSpan(), 4.0 )
         self.assertEquals( r.ySpan(), -1.0 )
         
+    def test_vertex(self):
+        
+        r = Rect( 1,2, 5,6 )
+        self.assertTrue( r.vertex(0).isNear( Point(1,2) ) )
+        self.assertTrue( r.vertex(1).isNear( Point(1,6) ) )
+        self.assertTrue( r.vertex(2).isNear( Point(5,6) ) )
+        self.assertTrue( r.vertex(3).isNear( Point(5,2) ) )
+        
+        r.setVertex(0, Point(3,4))
+        self.assertTrue( r.p0().isNear( Point(3,4) ) )
+        self.assertTrue( r.p1().isNear( Point(5,6) ) )
+        
+        r.setVertex(1, Point(1,2))
+        self.assertTrue( r.p0().isNear( Point(1,4) ) )
+        self.assertTrue( r.p1().isNear( Point(5,2) ) )
+        
+        r.setVertex(2, Point(7,8))
+        self.assertTrue( r.p0().isNear( Point(1,4) ) )
+        self.assertTrue( r.p1().isNear( Point(7,8) ) )
+        
+        r.setVertex(3, Point(10,0))
+        self.assertTrue( r.p0().isNear( Point(1,0) ) )
+        self.assertTrue( r.p1().isNear( Point(10,8) ) )
+        
         

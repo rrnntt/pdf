@@ -10,7 +10,7 @@ is in the top-right corner.
 The left border of the rectangle is always at x0 regardless whether x0 < x1 or not.
 The right border is always at x1.
 The bottom border of the rectangle is always at y0 regardless whether y0 < y1 or not.
-The top border is always at y1.
+The top border is always at y1. ???
 
 """
 class Rect:
@@ -85,3 +85,32 @@ class Rect:
         self._p0 += dp
         self._p1 += dp
         
+    def vertex(self, i):
+        """ 
+        Get i-th vertex (Point) of this Rect. If p0 is in the bottom-left corner then 
+        the vertices are numbered in the clockwise direction starting with p0.
+        """
+        if i == 0:
+            return self._p0
+        elif i == 1:
+            return Point(self._p0.x(), self._p1.y())
+        elif i == 2:
+            return self._p1
+        elif i == 3:
+            return Point(self._p1.x(), self._p0.y())
+
+    def setVertex(self, i, p):
+        """ Set i-th vertex (Point) of this Rect. Other vertices change accordingly. """
+        if not isinstance(p, Point):
+            raise Exception('A vertex is a Point')
+        if i == 0:
+            self._p0 = Point( p )
+        elif i == 1:
+            self._p0.set( p.x(), self._p0.y() )
+            self._p1.set( self._p1.x(), p.y() )
+        elif i == 2:
+            self._p1 = Point( p )
+        elif i == 3:
+            self._p0.set( self._p0.x(), p.y() )
+            self._p1.set( p.x(), self._p1.y() )
+                
