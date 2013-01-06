@@ -57,4 +57,18 @@ class TestStringParser(unittest.TestCase):
         p6.match('ss', 1)
         self.assertTrue(p6.hasMatch())
 
+    def test_getMatch(self):
+        
+        p2 = ABCParser()
+        p2.match('ABC123')
+        self.assertEqual( p2.getMatch('ABC123'), 'ABC' )
+
+        p5 = BlankSpaceParser()
+        p5.match(' s')
+        self.assertEqual( p5.getMatch(' s'), ' ' )
+
+        p6 = BlankSpaceParser()
+        p6.match('ss', 1)
+        self.assertEqual( p6.getMatch(' s'), '' )
+
         

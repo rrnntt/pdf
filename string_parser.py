@@ -78,4 +78,18 @@ class Parser:
         ?? should n == 0 be checked ??
         """
         raise Exception('_test method not implemented')
+    
+    def getMatch(self, s):
+        """
+        Return the matching sub-string of s or raise Exception if there is no match.
+        """
+        if not self._hasMatch:
+            raise Exception('There is no match')
+        
+        s_len = len(s)
+        if self._start >= s_len or self._start + self._size >= s_len:
+            raise Exception('Matching string is npt sub-string of s')
+        
+        return s[self._start : self._start + self._size]
+        
 
