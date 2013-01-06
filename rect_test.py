@@ -93,4 +93,57 @@ class TestRect(unittest.TestCase):
         self.assertTrue( r.p0().isNear( Point(1,0) ) )
         self.assertTrue( r.p1().isNear( Point(10,8) ) )
         
+    def test_translate(self):
+        
+        r = Rect(1,2,3,4)
+        r.translate(Point(0.5,-0.2))
+        self.assertTrue( r.p0().isNear(Point(1.5,1.8)) )
+        self.assertTrue( r.p1().isNear(Point(3.5,3.8)) )
+        
+    def test_adjust(self):
+        
+        r = Rect(1,2,3,4)
+        r.adjust(Point(-0.5,-0.2), Point(0.2,0.5))
+        self.assertTrue( r.p0().isNear(Point(0.5,1.8)) )
+        self.assertTrue( r.p1().isNear(Point(3.2,4.5)) )
+        
+    def test_include(self):
+        
+        r = Rect(1,2,3,4)
+        r.include( Point(1.5, 3.4) )
+        self.assertTrue( r.p0().isNear(Point(1,2)) )
+        self.assertTrue( r.p1().isNear(Point(3,4)) )
+        
+        r.include( Point(0, 0) )
+        self.assertTrue( r.p0().isNear(Point(0,0)) )
+        self.assertTrue( r.p1().isNear(Point(3,4)) )
+
+        r.include( Point(2, 5) )
+        self.assertTrue( r.p0().isNear(Point(0,0)) )
+        self.assertTrue( r.p1().isNear(Point(3,5)) )
+        
+    def test_unite(self):
+        r1 = Rect(1,2,3,4)
+        r2 = Rect(2,3,6,7)
+        r = Rect( r1 )
+        r.unite(r2)
+        self.assertTrue(r.contains(r1) and r.contains(r2))
+        r1.adjust(Point(-1e-14,-1e-14),Point(1e-14,1e-14))
+        self.assertFalse( r.contains( r1 ) )
+        self.assertFalse( r1.contains( r ) )
+    
+    def test_flip(self):
+        pass
+                 
+    def test_contains(self):
+        
+        r = Rect(1,2,3,4)
+        self.assertFalse( r.contains(Point(0,0)) )
+        self.assertFalse( r.contains(Point(2,4.1)) )
+        self.assertTrue( r.contains(Point(2,3)) )
+        self.assertTrue( r.contains(Rect(2,3,2.6,3.3)) )
+        self.assertTrue( r.contains(Rect(2.6,3.3,2,3)) )
+        r1 = Rect( r )
+        r1.adjust(Point(-1e-14,-1e-14),Point(1e-14,1e-14))
+        self.assertFalse( r.contains( r1 ) )
         
