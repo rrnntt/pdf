@@ -22,34 +22,42 @@ class Parser:
         self._canMatchEmpty = False
         
     def clone(self):
-        """
-        Virtual copy constructor.
+        """Virtual copy constructor.
+        
         Concrete parsers must implement this method
         """
         raise Exception('This is unimplemented parser')
     
-    def match(self, s, i = 0, n = -1):
-        """
-        Tries to match string s starting at index i and search maximum of n characters.
-        If n is negative search to the end of the string.
-        Return True if match was found and False if not.
+    def match(self, s, start = 0, end = -1):
+        """Try to find a match in a string.
+         
+        Match string s starting at index start and upto index end (index of last character + 1).
+        
+        Args:
+            s (str): a string to find a match in.
+            start (int): starting index in s (default 0)
+            end (int): ending index in s (default -1 meaning to the end of the string)
+        Return:
+            True if match was found and False if not.
         """
         self._hasMatch = False
         s_len = len(s)
+        # n: length of the searchable sub-string
+        n = end - start
         # handle empty string: if can match empty strings return True
         # if not return False
-        if s_len == 0 or n == 0 or i >= s_len:
-            self._start = i + n
+        if s_len == 0 or n == 0 or start >= s_len:
+            self._start = start
             self._size = 0
             self._hasMatch = self._canMatchEmpty
-            #self._empty = True
             return self._hasMatch
 
-        if n < 0 or i + n > s_len:
-            n = s_len - i
+        if n < 0 or end > s_len:
+            end = s_len
+            n = s_len - start
             
-        self._start = i
-        self._hasMatch,size = self._test(s, i, n)
+        self._start = start
+        self._hasMatch,size = self._test(s, start, end)
         # make sure _size is 0 if there is no match
         if self._hasMatch:
             if size > n:
@@ -62,15 +70,18 @@ class Parser:
         
 
     def hasMatch(self):
-        """
-        Checks if this parser had a match.
-        """
+        """Checks if this parser had a match."""
         return self._hasMatch
 
-    def _test(self, s, i, n):
-        """
-        Virtual protected method implemented in the concrete parsers wich test the string
-        for a match. Returns tuple (has_match, size_of_match)
+    def _test(self, s, start, end):
+        """Virtual protected method implemented in the concrete parsers wich test the string for a match. 
+        
+        Args:
+            s (str): a string to find a match in.
+            start (int): starting index in s.
+            end (int): ending index in s.
+        Return:
+            tuple (has_match, size_of_match)
         
         The idea is that this method doesn't change the state of this class directly but only
         states whether there is a match or not ( + give the size of the matching sub-string )
@@ -79,7 +90,6 @@ class Parser:
         because they are checked in match(s,i,n) which calls _test(). n must be checked however
         to be big enough for a particular parser, eg a parser matching string 'hello' much check
         that n is at least 5.
-        
         """
         raise Exception('_test method not implemented')
     
@@ -111,11 +121,9 @@ class CharParser(Parser):
         if len(s) == 0:
             raise Exception('List of characters cannot be empty')
     
-    def _test(self, s, i, n):
-        """
-        Implements the match test.
-        """
-        if s[i] in self._chars:
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        if s[start] in self._chars:
             return (True, 1)
         else:
             return (False, 0)
@@ -140,19 +148,15 @@ class NotCharParser(Parser):
         if len(s) == 0:
             raise Exception('List of characters cannot be empty')
     
-    def _test(self, s, i, n):
-        """
-        Implements the match test.
-        """
-        if s[i] not in self._chars:
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        if s[start] not in self._chars:
             return (True, 1)
         else:
             return (False, 0)
         
     def clone(self):
-        """
-        Implements cloning.
-        """
+        """Implements cloning."""
         return NotCharParser(self._chars)
         
 class StringParser(Parser):
@@ -169,12 +173,10 @@ class StringParser(Parser):
         if len(s) == 0:
             raise Exception('String cannot be empty')
     
-    def _test(self, s, i, n):
-        """
-        Implements the match test.
-        """
+    def _test(self, s, start, end):
+        """Implements the match test."""
         string_length = len(self._string) 
-        if s[i:i+string_length] == self._string:
+        if s[start : start + string_length] == self._string:
             return (True, string_length)
         else:
             return (False, 0)
@@ -200,16 +202,17 @@ class NotStringParser(Parser):
         if len(s) == 0:
             raise Exception('String cannot be empty')
     
-    def _test(self, s, i, n):
+    def _test(self, s, start, end):
         """
         Implements the match test.
         """
-        j = s.find( self._string, i, i + n )
+        j = s.find( self._string, start, end )
+        n = end - start
         # if _string not found all of s matches
         if j < 0 or n < len(self._string):
             return (True, n)
 
-        size = j - i
+        size = j - start
         if size == 0:
             return (False, 0)
         

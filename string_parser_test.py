@@ -3,28 +3,26 @@ import string_parser as sp
 from string_parser import Parser
 
 class ABCParser(Parser):
-    """
-    Test parser matching string 'ABC'
-    """
-    def _test(self, s, i, n):
-        
+    """Test parser matching string 'ABC'"""
+    def _test(self, s, start, end):
+        n = end - start
         if n < 3:
             return (False, 0)
         
-        if s[i:i+3] == 'ABC':
+        if s[start:start+3] == 'ABC':
             return (True, 3)
         else:
             return (False, 0)
         
 class BlankSpaceParser(Parser):
+    """Test parser matching a space character or making an empty match. 
+    
+    Always makes a match. To test Parser.match(s,start,end) handling empty matches.
     """
-    Test parser matching a space character or making an empty match. Always makes a match.
-    To test Parser.match(s,i,n) handling empty matches.
-    """
-    def _test(self, s, i , n):
-        if n == 0:
+    def _test(self, s, start , end):
+        if start == end:
             return (True, 0)
-        if s[i] == ' ':
+        if s[start] == ' ':
             return (True, 1)
         else:
             return (True, 0)
@@ -33,7 +31,7 @@ class WrongSizeParser(Parser):
     """
     Returns a very big size of the matched string. To test that Parser.match(s,i,n) can detect this.
     """
-    def _test(self, s, i , n):
+    def _test(self, s, start , end):
         return (True, 10000)
 
 class TestStringParser(unittest.TestCase):
@@ -206,7 +204,7 @@ class TestStringParser(unittest.TestCase):
         
         s = 'here dont stop'
         p = sp.NotStringParser('here')
-        p.match(s,1,5)
+        p.match(s,1,6)
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'ere d')
         
