@@ -263,6 +263,22 @@ class ZeroOrMoreSpaces(Parser):
                 return (True, i - start)
         return (True, end - start)
 
+class AllParser(Parser):
+    """Match any string even empty.
+    """
+    def __init__(self):
+        """Constructor."""
+        Parser.__init__(self)
+        self._canMatchEmpty = True
+        
+    def clone(self):
+        """Implements cloning."""
+        return AllParser()
+
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        return (True, end - start)
+
 class MultiParser(Parser):
     """Base class for a complex parser containing other parsers."""
     def __init__(self):
@@ -392,4 +408,88 @@ class ListParser(MultiParser):
                 d = self._parsers[1].clone() 
                 self.addParser(d)
                     
-            
+class AltParser(MultiParser):
+    """A set of alternative parsers."""
+    def __init__(self):
+        """Constructor."""
+        MultiParser.__init__(self)
+        # the parser which had a match
+        self._good = None
+
+    def clone(self):
+        """Implements cloning. Clones all child parsers."""
+        p = AltParser()
+        for c in self._parsers:
+            p.addParser( c.clone() )
+        return p
+    
+    def goodParser(self):
+        """Return the parser which had a match or None if none had a match"""
+        return self._good
+        
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        if len(self._parsers) == 0:
+            raise Exception('Empty AltParser.')
+        
+        for c in self._parsers:
+            c.match( s, start, end )
+            if c.hasMatch():
+                return (True, c.getEnd() - start)
+        return (False, 0)
+
+class BracketsParser(MultiParser):
+    """Matches a string enclosed in brackets.
+    """
+    def __init__(self, bra = '(', ket = ')', parser = AllParser()):
+        """Constructor.
+        
+        Args:
+            bra (str): opening bracket (default '(')
+            ket (str): closing bracket (default ')')
+            parser (Parser): a parser to match sub-string inside the brackets
+        """
+        MultiParser.__init__(self)
+        self._bra = bra
+        self._ket = ket
+        self.addParser(parser)
+        
+    def clone(self):
+        """Implements cloning. Clones all child parsers."""
+        p = BracketsParser(self._bra,self._ket, self[0])
+        return p
+        
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        n = end - start
+        l_bra = len(self._bra)
+        l_ket = len(self._ket)
+        if n < l_bra + l_ket:
+            return (False, 0)
+        
+        if not s.startswith(self._bra, start, end):
+            return (False, 0)
+        
+        i = start + l_bra
+        level = 1
+        while i < end:
+            if s.startswith(self._bra, i, end):
+                level += 1
+                i += l_bra
+            elif s.startswith(self._ket, i, end):
+                level -= 1
+                if level == 0:
+                    self[0].match(s, start + l_bra, i)
+                    if self[0].hasMatch():
+                        return (True, i + l_ket - start)
+                    else:
+                        return (False, 0)
+                i += l_ket
+            else:
+                i += 1
+        # closing bracket was not found: failed
+        return (False, 0)
+        
+        
+
+    

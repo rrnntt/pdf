@@ -281,6 +281,21 @@ class TestStringParser(unittest.TestCase):
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'')
         
+    def test_AllParser(self):
+        
+        p = sp.AllParser()
+        s = 'stuff 12@'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),s)
+        
+        p = sp.AllParser()
+        s = ''
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),s)
+        
+        
     def test_MultiParser(self):
         
         p = sp.MultiParser()
@@ -394,4 +409,46 @@ class TestStringParser(unittest.TestCase):
         s = 'h,e,l,l,o,'
         p.match(s)
         self.assertFalse(p.hasMatch())
+        
+    def test_AltParser(self):
+        
+        s = 'hello'
+        p = sp.AltParser()
+        p.addParser( sp.StringParser('hello') )
+        p.addParser( sp.StringParser('world') )
+        p.match( s )
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'hello')
+        
+        s = 'world!'
+        p = sp.AltParser()
+        p.addParser( sp.StringParser('hello') )
+        p.addParser( sp.StringParser('world!') )
+        p.match( s )
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'world!')
+        
+    def test_BracketsParser(self):
+        
+        p = sp.BracketsParser()
+        s = '(< a + b >)   '
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'(< a + b >)')
+        self.assertEqual(p[0].getMatch(s),'< a + b >')
+        
+        p = sp.BracketsParser('(<', '>)')
+        s = '(< a + b >)   '
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'(< a + b >)')
+        self.assertEqual(p[0].getMatch(s),' a + b ')
+
+        p = sp.BracketsParser()
+        s = '((a) + b*(c+sin(x)))   '
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'((a) + b*(c+sin(x)))')
+        self.assertEqual(p[0].getMatch(s),'(a) + b*(c+sin(x))')
+        
         
