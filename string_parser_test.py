@@ -153,6 +153,23 @@ class TestStringParser(unittest.TestCase):
         cc = c2.clone()
         self.assertEqual(cc._chars, 'ab')
         self.assertFalse(cc.hasMatch())
+        
+    def test_AllNotCharParser(self):
+        # initialization with empty strings is not allowed 
+        self.assertRaises(Exception, sp.AllNotCharParser, '' )
+        
+        p = sp.AllNotCharParser(' (')
+        s = 'function   (x)'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'function')
+        
+        p = sp.AllNotCharParser(' (')
+        s = 'function( x )'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'function')
+        
 
     def test_StringParser(self):
         # initialization with empty strings is not allowed 
@@ -285,5 +302,96 @@ class TestStringParser(unittest.TestCase):
         self.assertNotEqual(c[0], p0)
         self.assertNotEqual(c[1], p1)
         
+    def test_SeqParser(self):
         
+        s = 'Hello   World!'
+        p = sp.SeqParser()
+        p.addParser(sp.StringParser('Hello'))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.StringParser('World!'))
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),s)
+        
+        s = 'HelloWorld!'
+        p = sp.SeqParser()
+        p.addParser(sp.StringParser('Hello'))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.StringParser('World!'))
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),s)
+        
+        s = 'hello   World!'
+        p = sp.SeqParser()
+        p.addParser(sp.StringParser('Hello'))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.StringParser('World!'))
+        p.match(s)
+        self.assertFalse(p.hasMatch())
+        
+        s = 'Hello   World'
+        p = sp.SeqParser()
+        p.addParser(sp.StringParser('Hello'))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.StringParser('World!'))
+        p.match(s)
+        self.assertFalse(p.hasMatch())
+        
+        s = 'function(   x )'
+        p = sp.SeqParser()
+        p.addParser(sp.AllNotCharParser(' ('))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.CharParser('('))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.AllNotCharParser(' )'))
+        p.addParser(sp.ZeroOrMoreSpaces())
+        p.addParser(sp.CharParser(')'))
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),s)
+        res = p[0].getMatch(s) + p[2].getMatch(s) + p[4].getMatch(s) + p[6].getMatch(s)
+        self.assertEqual(res,'function(x)')
+        
+    def test_ListParser(self):
+        
+        p = sp.ListParser( sp.CharParser('a') )
+        s = 'aaab'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'aaa')
+        
+        p = sp.ListParser( sp.CharParser('a') )
+        p.match('')
+        self.assertFalse(p.hasMatch())
+        
+        # has match if 'zero' argument is True
+        p = sp.ListParser( sp.CharParser('a'), True )
+        s = 'bbb'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'')
+        
+        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
+        s = 'h,e,l,l,o'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'h,e,l,l,o')
+        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
+        self.assertEqual(res,'hello')
+
+        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
+        s = 'h,e,l,l,o,'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'h,e,l,l,o,')
+        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
+        self.assertEqual(res,'hello')
+        # token parser failed on the last empty token doesn't have a match
+        self.assertFalse(p[10].hasMatch())
+
+        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(','), False) )
+        s = 'h,e,l,l,o,'
+        p.match(s)
+        self.assertFalse(p.hasMatch())
         

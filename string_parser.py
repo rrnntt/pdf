@@ -102,6 +102,12 @@ class Parser:
             raise Exception('Matching string is not sub-string of s')
         
         return s[self._start : self._start + self._size]
+    
+    def getEnd(self):
+        """Return the end index of the parser.
+        It points to the unprocessed part of the test string.
+        """ 
+        return self._start + self._size
         
 
 class CharParser(Parser):
@@ -149,6 +155,31 @@ class NotCharParser(Parser):
     def clone(self):
         """Implements cloning."""
         return NotCharParser(self._chars)
+        
+class AllNotCharParser(Parser):
+    """Match all characters not from a list."""
+    def __init__(self, s):
+        """
+        Constructor. Initializes the parser with a list of characters to choose from.
+        s is a string with characters to match. s cannot be empty. 
+        """
+        Parser.__init__(self)
+        self._chars = s
+        if len(s) == 0:
+            raise Exception('List of characters cannot be empty')
+    
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        for i in range(start,end): 
+            if s[i] in self._chars:
+                if i == start:
+                    return (False, 0)
+                return (True, i - start)
+        return (True, end - start)
+        
+    def clone(self):
+        """Implements cloning."""
+        return AllNotCharParser(self._chars)
         
 class StringParser(Parser):
     """Match a string exactly."""
@@ -269,3 +300,96 @@ class SeqParser(MultiParser):
     def __init__(self):
         """Constructor."""
         MultiParser.__init__(self)
+
+    def clone(self):
+        """Implements cloning. Clones all child parsers."""
+        p = SeqParser()
+        for c in self._parsers:
+            p.addParser( c.clone() )
+        return p
+    
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        if len(self._parsers) == 0:
+            raise Exception('Empty SeqParser.')
+        
+        i = start
+        for c in self._parsers:
+            c.match( s, i, end )
+            if not c.hasMatch():
+                return (False, 0)
+            i = c.getEnd()
+        return (True, i - start)
+
+class ListParser(MultiParser):
+    """Parsers a list of similar tokens. All tokens must be matched by the same type of parser."""
+    def __init__(self, parser, zero = False):
+        """Constructor.
+        
+        Args:
+            parser (Parser or tuple): parser(s) for each token. If it is a tuple of two parsers the first
+                one is the token parser and the second is the delimiter. The third tuple member (optional) 
+                is a boolean defining if the last token in the list can be empty (default True).
+            zero (bool): set to True if zero matches is OK. 
+        """
+        MultiParser.__init__(self)
+        self._canMatchEmpty = zero
+        if isinstance(parser, Parser):
+            self.addParser(parser)
+            self._hasDelimiter = False
+            self._canLastBeEmpty = False
+        else:
+            self.addParser(parser[0])
+            self.addParser(parser[1])
+            self._hasDelimiter = True
+            if len(parser) > 2:
+                self._canLastBeEmpty = parser[2]
+            else:
+                self._canLastBeEmpty = True
+            
+    def clone(self):
+        """Implements cloning."""
+        if self._hasDelimiter:
+            p = ListParser((self._parsers[0].clone(), self._parsers[1].clone()),self._canMatchEmpty)
+        else:
+            p = ListParser(self._parsers[0].clone(),self._canMatchEmpty)
+        return p
+
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        p = self._parsers[0]
+        if self._hasDelimiter:
+            d = self._parsers[1]
+        done = False
+        i = start
+        while not done: 
+            # try the token parser
+            p.match(s,i,end)
+            if not p.hasMatch():
+                if i == start:
+                    return (self._canMatchEmpty, 0)
+                # if delimiter parser is defined check that the last token can be empty
+                if self._hasDelimiter:
+                    if self._canLastBeEmpty:
+                        del self._parsers[-1]
+                        return (True, self._parsers[-1].getEnd() - start)
+                    else:
+                        return (False, 0)
+                return (True, self._parsers[-1].getEnd() - start)
+            # the token had match: try next delimiter
+            if self._hasDelimiter:
+                i = p.getEnd()
+                d.match(s,i,end)
+                if not d.hasMatch():
+                    return (True, i - start)
+            # token and delimiter matched: prepare next iteration
+            i = self._parsers[-1].getEnd()
+            # clone the token parser
+            p = self._parsers[0].clone() 
+            self.addParser(p)
+            if self._hasDelimiter:
+                # clone the delimiter parser
+                d = self._parsers[1].clone() 
+                self.addParser(d)
+                    
+            
