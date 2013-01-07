@@ -14,6 +14,9 @@ class ABCParser(Parser):
         else:
             return (False, 0)
         
+    def clone(self):
+        return ABCParser()
+        
 class BlankSpaceParser(Parser):
     """Test parser matching a space character or making an empty match. 
     
@@ -26,6 +29,9 @@ class BlankSpaceParser(Parser):
             return (True, 1)
         else:
             return (True, 0)
+        
+    def clone(self):
+        return BlankSpaceParser()
         
 class WrongSizeParser(Parser):
     """
@@ -213,4 +219,71 @@ class TestStringParser(unittest.TestCase):
         p.match(s,10,15)
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'stop')
+        
+    def test_ZeroOrMoreSpaces(self):
+        
+        s = '   hello!'
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'   ')
+        
+        s = 'hello   world!'
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s,5)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'   ')
+
+        s = 'hello      world!'
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s,5)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'      ')
+
+        s = 'hello      world!'
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s,5,8)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'   ')
+
+        s = 'hello      world!'
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s,1)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'')
+
+        s = 'hello\n     \tworld!'
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s,5)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'\n     \t')
+
+        s = ''
+        p = sp.ZeroOrMoreSpaces()
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'')
+        
+    def test_MultiParser(self):
+        
+        p = sp.MultiParser()
+        p0 = ABCParser()
+        p1 = BlankSpaceParser()
+        p.addParser(p0)
+        p.addParser(p1)
+        
+        self.assertEqual(len(p), 2)
+        self.assertEqual(p[0], p0)
+        self.assertEqual(p[1], p1)
+        
+        c = p.clone()
+        self.assertEqual(len(c), 2)
+        self.assertTrue( isinstance(c,sp.MultiParser) )
+        self.assertTrue( isinstance(c[0],ABCParser) )
+        self.assertTrue( isinstance(c[1],BlankSpaceParser) )
+        self.assertNotEqual(c, p)
+        self.assertNotEqual(c[0], p0)
+        self.assertNotEqual(c[1], p1)
+        
+        
         

@@ -1,13 +1,9 @@
-
-
 """
 Defines string parsing classes. Parsers can be combined to parse complex syntaxes.
 """
 
 class Parser:
-    """
-    Base class for all parsers.
-    """
+    """Base class for all parsers."""
     def __init__(self):
         # If this parser had a match _hasMatch is set to True
         self._hasMatch = False
@@ -94,12 +90,13 @@ class Parser:
         raise Exception('_test method not implemented')
     
     def getMatch(self, s):
-        """
-        Return the matching sub-string of s or raise Exception if there is no match.
-        """
+        """Return the matching sub-string of s or raise Exception if there is no match."""
         if not self._hasMatch:
             raise Exception('There is no match')
-        
+
+        if self._size == 0 and self._canMatchEmpty:
+            return ''
+                
         s_len = len(s)
         if self._start >= s_len or self._start + self._size > s_len:
             raise Exception('Matching string is not sub-string of s')
@@ -108,9 +105,7 @@ class Parser:
         
 
 class CharParser(Parser):
-    """
-    Match a single character from a list.
-    """
+    """Match a single character from a list."""
     def __init__(self, s):
         """
         Constructor. Initializes the parser with a list of characters to choose from.
@@ -129,15 +124,11 @@ class CharParser(Parser):
             return (False, 0)
         
     def clone(self):
-        """
-        Implements cloning.
-        """
+        """Implements cloning."""
         return CharParser(self._chars)
         
 class NotCharParser(Parser):
-    """
-    Match a single character not from a list
-    """
+    """Match a single character not from a list."""
     def __init__(self, s):
         """
         Constructor. Initializes the parser with a list of characters to choose from.
@@ -160,9 +151,7 @@ class NotCharParser(Parser):
         return NotCharParser(self._chars)
         
 class StringParser(Parser):
-    """
-    Match a string exactly.
-    """
+    """Match a string exactly."""
     def __init__(self, s):
         """
         Constructor. Initializes the parser with a string to match with.
@@ -189,13 +178,14 @@ class StringParser(Parser):
         
     
 class NotStringParser(Parser):
-    """
-    Match all characters until a certain string is found
-    """
+    """Match all characters until a certain string is found"""
     def __init__(self, s):
-        """
-        Constructor. Initializes the parser with a string to match with.
-        s cannot be empty. 
+        """Constructor. 
+        
+        Initializes the parser with a string to match with.
+        
+        Args:
+            s (str): the pattern string, cannot be empty. 
         """
         Parser.__init__(self)
         self._string = s
@@ -203,9 +193,7 @@ class NotStringParser(Parser):
             raise Exception('String cannot be empty')
     
     def _test(self, s, start, end):
-        """
-        Implements the match test.
-        """
+        """Implements the match test."""
         j = s.find( self._string, start, end )
         n = end - start
         # if _string not found all of s matches
@@ -219,9 +207,65 @@ class NotStringParser(Parser):
         return (True, size)
         
     def clone(self):
-        """
-        Implements cloning.
-        """
+        """Implements cloning."""
         return NotStringParser(self._string)
         
+class ZeroOrMoreSpaces(Parser):
+    """Match any number (including zero) of consequtive empty space characters.
     
+    The empty space characters are ' ', '\t', '\n'. Always has a match.
+    """
+    def __init__(self):
+        """Constructor."""
+        Parser.__init__(self)
+        self._chars = ' \t\n'
+        self._canMatchEmpty = True
+        
+    def clone(self):
+        """Implements cloning."""
+        return ZeroOrMoreSpaces()
+
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        for i in range(start,end):
+            if s[i] not in self._chars:
+                return (True, i - start)
+        return (True, end - start)
+
+class MultiParser(Parser):
+    """Base class for a complex parser containing other parsers."""
+    def __init__(self):
+        """Constructor."""
+        Parser.__init__(self)
+        self._parsers = []
+        
+    def clone(self):
+        """Implements cloning. Clones all child parsers."""
+        p = MultiParser()
+        for c in self._parsers:
+            p.addParser( c.clone() )
+        return p
+        
+    def addParser(self, p):
+        """Add a child parser.
+        
+        Args:
+            p (Parser): a child parser.
+        """
+        if not isinstance(p, Parser):
+            raise Exception('A Parser expected.')
+        self._parsers.append(p)
+        
+    def __getitem__(self, i):
+        """Return i-th child parser."""
+        return self._parsers[i]
+    
+    def __len__(self):
+        """Return number of child parsers."""
+        return len(self._parsers)
+        
+class SeqParser(MultiParser):
+    """Sequential parser: a sequence of parsers which all must match.""" 
+    def __init__(self):
+        """Constructor."""
+        MultiParser.__init__(self)
