@@ -28,6 +28,13 @@ class BlankSpaceParser(Parser):
             return (True, 1)
         else:
             return (True, 0)
+        
+class WrongSizeParser(Parser):
+    """
+    Returns a very big size of the matched string. To test that Parser.match(s,i,n) can detect this.
+    """
+    def _test(self, s, i , n):
+        return (True, 10000)
 
 class TestStringParser(unittest.TestCase):
     
@@ -36,6 +43,7 @@ class TestStringParser(unittest.TestCase):
         p1 = ABCParser()
         p1.match('ABC')
         self.assertTrue(p1.hasMatch())
+        self.assertEqual(p1.getMatch('ABC'), 'ABC')
         # matching at start of the string
         p2 = ABCParser()
         p2.match('ABC123')
@@ -71,6 +79,9 @@ class TestStringParser(unittest.TestCase):
         p9 = ABCParser()
         p9.match('ABC', 0, 2)
         self.assertFalse(p9.hasMatch())
+        
+        p = WrongSizeParser()
+        self.assertRaises(Exception, p.match, 'ABC')
         
 
     def test_getMatch(self):
@@ -112,3 +123,96 @@ class TestStringParser(unittest.TestCase):
         cc = c2.clone()
         self.assertEqual(cc._chars, 'ab')
         self.assertFalse(cc.hasMatch())
+
+    def test_NotCharParser(self):
+        # initialization with empty strings is not allowed 
+        self.assertRaises(Exception, sp.NotCharParser, '' )
+        
+        c = sp.NotCharParser('ab')
+        # has no match just after creation
+        self.assertFalse( c.hasMatch() )
+        
+        s = 'ambs'
+        c.match(s)
+        self.assertFalse(c.hasMatch())
+
+        c1 = sp.NotCharParser('ab')
+        c1.match(s, 1)
+        self.assertTrue(c1.hasMatch())
+        self.assertEqual(c1.getMatch(s), 'm')
+
+        c2 = sp.NotCharParser('ab')
+        c2.match('')
+        self.assertFalse(c2.hasMatch())
+        
+        # clone returns a cleanly initialized copy
+        cc = c2.clone()
+        self.assertEqual(cc._chars, 'ab')
+        self.assertFalse(cc.hasMatch())
+
+    def test_StringParser(self):
+        # initialization with empty strings is not allowed 
+        self.assertRaises(Exception, sp.StringParser, '' )
+        
+        s = 'hello world!'
+        p = sp.StringParser('hello')
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'hello')
+
+        s = 'world hello!'
+        p = sp.StringParser('hello')
+        p.match(s,6)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'hello')
+
+        s = 'Hello'
+        p = sp.StringParser('hello')
+        p.match(s)
+        self.assertFalse(p.hasMatch())
+
+    def test_NotStringParser(self):
+        # initialization with empty strings is not allowed 
+        self.assertRaises(Exception, sp.NotStringParser, '' )
+        
+        s = 'stop here'
+        p = sp.NotStringParser('here')
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'stop ')
+        
+        s = ''
+        p = sp.NotStringParser('here')
+        p.match(s)
+        self.assertFalse(p.hasMatch())
+        
+        s = 'stop there'
+        p = sp.NotStringParser('here')
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'stop t')
+        
+        s = 'dont stop'
+        p = sp.NotStringParser('here')
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'dont stop')
+        
+        s = 'here dont stop'
+        p = sp.NotStringParser('here')
+        p.match(s,0,3)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'her')
+        
+        s = 'here dont stop'
+        p = sp.NotStringParser('here')
+        p.match(s,1,5)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'ere d')
+        
+        s = 'here dont stop'
+        p = sp.NotStringParser('here')
+        p.match(s,10,15)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'stop')
+        

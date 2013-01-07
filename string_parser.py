@@ -45,18 +45,18 @@ class Parser:
             #self._empty = True
             return self._hasMatch
 
-        if n < 0 or n > s_len:
-            n = s_len
+        if n < 0 or i + n > s_len:
+            n = s_len - i
             
         self._start = i
         self._hasMatch,size = self._test(s, i, n)
         # make sure _size is 0 if there is no match
         if self._hasMatch:
+            if size > n:
+                raise Exception('Wrong size returned by a parser')
             self._size = size
         else:
             self._size = 0 
-        #if self._size == 0:
-        #    self._empty = True # why do I need this?
         
         return self._hasMatch
         
@@ -91,15 +91,15 @@ class Parser:
             raise Exception('There is no match')
         
         s_len = len(s)
-        if self._start >= s_len or self._start + self._size >= s_len:
-            raise Exception('Matching string is npt sub-string of s')
+        if self._start >= s_len or self._start + self._size > s_len:
+            raise Exception('Matching string is not sub-string of s')
         
         return s[self._start : self._start + self._size]
         
 
 class CharParser(Parser):
     """
-    Match a single character.
+    Match a single character from a list.
     """
     def __init__(self, s):
         """
@@ -126,3 +126,99 @@ class CharParser(Parser):
         """
         return CharParser(self._chars)
         
+class NotCharParser(Parser):
+    """
+    Match a single character not from a list
+    """
+    def __init__(self, s):
+        """
+        Constructor. Initializes the parser with a list of characters to choose from.
+        s is a string with characters to match. s cannot be empty. 
+        """
+        Parser.__init__(self)
+        self._chars = s
+        if len(s) == 0:
+            raise Exception('List of characters cannot be empty')
+    
+    def _test(self, s, i, n):
+        """
+        Implements the match test.
+        """
+        if s[i] not in self._chars:
+            return (True, 1)
+        else:
+            return (False, 0)
+        
+    def clone(self):
+        """
+        Implements cloning.
+        """
+        return NotCharParser(self._chars)
+        
+class StringParser(Parser):
+    """
+    Match a string exactly.
+    """
+    def __init__(self, s):
+        """
+        Constructor. Initializes the parser with a string to match with.
+        s cannot be empty. 
+        """
+        Parser.__init__(self)
+        self._string = s
+        if len(s) == 0:
+            raise Exception('String cannot be empty')
+    
+    def _test(self, s, i, n):
+        """
+        Implements the match test.
+        """
+        string_length = len(self._string) 
+        if s[i:i+string_length] == self._string:
+            return (True, string_length)
+        else:
+            return (False, 0)
+        
+    def clone(self):
+        """
+        Implements cloning.
+        """
+        return StringParser(self._string)
+        
+    
+class NotStringParser(Parser):
+    """
+    Match all characters until a certain string is found
+    """
+    def __init__(self, s):
+        """
+        Constructor. Initializes the parser with a string to match with.
+        s cannot be empty. 
+        """
+        Parser.__init__(self)
+        self._string = s
+        if len(s) == 0:
+            raise Exception('String cannot be empty')
+    
+    def _test(self, s, i, n):
+        """
+        Implements the match test.
+        """
+        j = s.find( self._string, i, i + n )
+        # if _string not found all of s matches
+        if j < 0 or n < len(self._string):
+            return (True, n)
+
+        size = j - i
+        if size == 0:
+            return (False, 0)
+        
+        return (True, size)
+        
+    def clone(self):
+        """
+        Implements cloning.
+        """
+        return NotStringParser(self._string)
+        
+    
