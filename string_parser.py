@@ -49,7 +49,12 @@ class Parser:
             n = s_len
             
         self._start = i
-        self._hasMatch,self._size  = self._test(s, i, n) 
+        self._hasMatch,size = self._test(s, i, n)
+        # make sure _size is 0 if there is no match
+        if self._hasMatch:
+            self._size = size
+        else:
+            self._size = 0 
         #if self._size == 0:
         #    self._empty = True # why do I need this?
         
@@ -75,7 +80,6 @@ class Parser:
         to be big enough for a particular parser, eg a parser matching string 'hello' much check
         that n is at least 5.
         
-        ?? should n == 0 be checked ??
         """
         raise Exception('_test method not implemented')
     
@@ -93,3 +97,32 @@ class Parser:
         return s[self._start : self._start + self._size]
         
 
+class CharParser(Parser):
+    """
+    Match a single character.
+    """
+    def __init__(self, s):
+        """
+        Constructor. Initializes the parser with a list of characters to choose from.
+        s is a string with characters to match. s cannot be empty. 
+        """
+        Parser.__init__(self)
+        self._chars = s
+        if len(s) == 0:
+            raise Exception('List of characters cannot be empty')
+    
+    def _test(self, s, i, n):
+        """
+        Implements the match test.
+        """
+        if s[i] in self._chars:
+            return (True, 1)
+        else:
+            return (False, 0)
+        
+    def clone(self):
+        """
+        Implements cloning.
+        """
+        return CharParser(self._chars)
+        
