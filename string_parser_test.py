@@ -451,4 +451,23 @@ class TestStringParser(unittest.TestCase):
         self.assertEqual(p.getMatch(s),'((a) + b*(c+sin(x)))')
         self.assertEqual(p[0].getMatch(s),'(a) + b*(c+sin(x))')
         
+    def test_AlphaParser(self):
+        
+        p = sp.AlphaParser()
+        s = 'Alpha123'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'Alpha')
+        
+        p = sp.AlphaParser()
+        s = 'Alpha Beta'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'Alpha')
+        
+        p = sp.AlphaParser()
+        s = 'Alpha( Beta )'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'Alpha')
         

@@ -279,6 +279,26 @@ class AllParser(Parser):
         """Implements the match test."""
         return (True, end - start)
 
+class AlphaParser(Parser):
+    """Match a string containing alphabetic characters."""
+    def __init__(self):
+        """Constructor."""
+        Parser.__init__(self)
+        
+    def clone(self):
+        """Implements cloning."""
+        return AlphaParser()
+
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        for i in range(start,end):
+            if not s[i].isalpha():
+                if i == start:
+                    return (False, 0)
+                else:
+                    return (True, i - start)
+        return (True, end - start)
+
 class MultiParser(Parser):
     """Base class for a complex parser containing other parsers."""
     def __init__(self):
@@ -472,13 +492,16 @@ class BracketsParser(MultiParser):
         
         i = start + l_bra
         level = 1
+        # find the closing bracket and the job is done
         while i < end:
+            # skip any inner brackets
             if s.startswith(self._bra, i, end):
                 level += 1
                 i += l_bra
             elif s.startswith(self._ket, i, end):
                 level -= 1
                 if level == 0:
+                    # the closing bracket is found: try to match the child parser
                     self[0].match(s, start + l_bra, i)
                     if self[0].hasMatch():
                         return (True, i + l_ket - start)
