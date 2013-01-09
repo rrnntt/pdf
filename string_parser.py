@@ -455,6 +455,7 @@ class AltParser(MultiParser):
         for c in self._parsers:
             c.match( s, start, end )
             if c.hasMatch():
+                self._good = c
                 return (True, c.getEnd() - start)
         return (False, 0)
 

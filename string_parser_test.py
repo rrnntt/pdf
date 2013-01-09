@@ -419,6 +419,8 @@ class TestStringParser(unittest.TestCase):
         p.match( s )
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'hello')
+        self.assertTrue( p.goodParser() )
+        self.assertEqual(p.goodParser().getMatch(s),'hello')
         
         s = 'world!'
         p = sp.AltParser()
@@ -427,6 +429,8 @@ class TestStringParser(unittest.TestCase):
         p.match( s )
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'world!')
+        self.assertTrue( p.goodParser() )
+        self.assertEqual(p.goodParser().getMatch(s),'world!')
         
     def test_BracketsParser(self):
         
