@@ -72,7 +72,19 @@ class TestLatexParsers(unittest.TestCase):
         s = r'\alpha+\beta=gamma'
         p.match(s)
         self.assertTrue( p.hasMatch() )
-        print p.getMatch(s)
-        print p.docItem.writePDF()
+        self.assertEquals( p.getMatch(s), r'\alpha+\beta=gamma' )
+        self.assertEquals( p.docItem.writePDF(), u'α + β =gamma ' )
         
+        p = lp.ParagraphParser()
+        f = open('20k_c1.txt','rU')
+        s = f.read()
+        f.close()
+        p.match(s)
+        self.assertTrue( p.hasMatch() )
         
+        pdf=FPDF()
+        pdf.add_page()
+        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
+        pdf.set_font('DejaVu','',11)
+        pdf.write(10, p.docItem.writePDF())
+        pdf.output('test.pdf', 'F')

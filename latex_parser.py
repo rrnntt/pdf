@@ -3,8 +3,9 @@ from string_parser import *
 
 class DocItem:
     """An item of a document. Can be simple or complex. Complex items contain other items."""
-    items = []
-    name = ''
+    def __init__(self):
+        self.items = []
+        self.name = ''
     
 symbols = {'alpha': u'\u03b1',
            'beta': u'\u03b2',
@@ -34,6 +35,7 @@ symbols = {'alpha': u'\u03b1',
 class Word(DocItem):
     """Prints a word"""
     def __init__(self, name):
+        DocItem.__init__(self)
         self.name = name
         
     def writePDF(self, pdf = None):
@@ -47,6 +49,7 @@ class Word(DocItem):
 class Symbol(DocItem):
     """Prints a symbol or word wich can be output as a unicode string"""
     def __init__(self, name):
+        DocItem.__init__(self)
         self.name = name
         
     def writePDF(self, pdf = None):
@@ -59,10 +62,15 @@ class Symbol(DocItem):
     
 class BoxItem(DocItem):
     """More complex than Word or Symbol"""
+    def __init__(self):
+        DocItem.__init__(self)
     pass
         
 class Paragraph(BoxItem):
     """Paragraph of a documant."""
+    def __init__(self):
+        BoxItem.__init__(self)
+        
     def appendItem(self, item):
         """Append a document item to the paragraph."""
         self.items.append(item)
