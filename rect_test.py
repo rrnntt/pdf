@@ -1,5 +1,5 @@
 import unittest
-from rect import Rect
+from rect import Rect, _justifyX, justifyX
 from point import Point
 
 class TestRect(unittest.TestCase):
@@ -147,3 +147,122 @@ class TestRect(unittest.TestCase):
         r1.adjust(Point(-1e-14,-1e-14),Point(1e-14,1e-14))
         self.assertFalse( r.contains( r1 ) )
         
+    def test__justify(self):
+        
+        _justifyX([], 0, 1)
+        
+        r = Rect(0,1,1,2)
+        _justifyX([r], 1.1,2.2)
+        self.assertTrue(r.p0().isNear(Point(1.1,1.0)))
+        self.assertAlmostEqual(r.width(), 1.0)
+        self.assertAlmostEqual(r.height(), 1.0)
+        
+        rlist = [Rect(0,1,1,2), Rect(0,1,1,2), Rect(0,1,1,2)]
+        _justifyX(rlist, 10, 13)
+        self.assertAlmostEqual(rlist[0].x0(), 10)
+        self.assertAlmostEqual(rlist[0].x1(), 11)
+        self.assertAlmostEqual(rlist[0].y0(), 1)
+        self.assertAlmostEqual(rlist[0].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[1].x0(), 11)
+        self.assertAlmostEqual(rlist[1].x1(), 12)
+        self.assertAlmostEqual(rlist[1].y0(), 1)
+        self.assertAlmostEqual(rlist[1].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[2].x0(), 12)
+        self.assertAlmostEqual(rlist[2].x1(), 13)
+        self.assertAlmostEqual(rlist[2].y0(), 1)
+        self.assertAlmostEqual(rlist[2].y1(), 2)
+        
+        rlist = [Rect(0,1,1,2), Rect(0,1,1,2), Rect(0,1,1,2)]
+        _justifyX(rlist, 10, 12)
+        self.assertAlmostEqual(rlist[0].x0(), 10)
+        self.assertAlmostEqual(rlist[0].x1(), 11)
+        self.assertAlmostEqual(rlist[0].y0(), 1)
+        self.assertAlmostEqual(rlist[0].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[1].x0(), 10.5)
+        self.assertAlmostEqual(rlist[1].x1(), 11.5)
+        self.assertAlmostEqual(rlist[1].y0(), 1)
+        self.assertAlmostEqual(rlist[1].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[2].x0(), 11)
+        self.assertAlmostEqual(rlist[2].x1(), 12)
+        self.assertAlmostEqual(rlist[2].y0(), 1)
+        self.assertAlmostEqual(rlist[2].y1(), 2)
+        
+    def test_justify(self):
+        
+        justifyX([], 0, 1)
+        
+        r = Rect(0,1,1,2)
+        n = justifyX([r], 1.1,2.2)
+        self.assertEqual(n, 1)
+        self.assertTrue(r.p0().isNear(Point(1.1,1.0)))
+        self.assertAlmostEqual(r.width(), 1.0)
+        self.assertAlmostEqual(r.height(), 1.0)
+        
+        r = Rect(0,1,1,2)
+        n = justifyX([r], 1.1,2.0)
+        self.assertEqual(n, 0)
+        self.assertTrue(r.p0().isNear(Point(0.0,1.0)))
+        self.assertAlmostEqual(r.width(), 1.0)
+        self.assertAlmostEqual(r.height(), 1.0)
+        
+        rlist = [Rect(0,1,1,2), Rect(0,1,1,2), Rect(0,1,1,2)]
+        n = justifyX(rlist, 10, 12)
+        self.assertEqual(n, 2)
+        self.assertAlmostEqual(rlist[0].x0(), 10)
+        self.assertAlmostEqual(rlist[0].x1(), 11)
+        self.assertAlmostEqual(rlist[0].y0(), 1)
+        self.assertAlmostEqual(rlist[0].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[1].x0(), 11)
+        self.assertAlmostEqual(rlist[1].x1(), 12)
+        self.assertAlmostEqual(rlist[1].y0(), 1)
+        self.assertAlmostEqual(rlist[1].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[2].x0(), 0)
+        self.assertAlmostEqual(rlist[2].x1(), 1)
+        self.assertAlmostEqual(rlist[2].y0(), 1)
+        self.assertAlmostEqual(rlist[2].y1(), 2)
+        
+        rlist = [Rect(0,1,1,2), Rect(0,1,1,2), Rect(0,1,1,2)]
+        n = justifyX(rlist, 10, 14)
+        self.assertEqual(n, 3)
+        self.assertAlmostEqual(rlist[0].x0(), 10)
+        self.assertAlmostEqual(rlist[0].x1(), 11)
+        self.assertAlmostEqual(rlist[0].y0(), 1)
+        self.assertAlmostEqual(rlist[0].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[1].x0(), 11.5)
+        self.assertAlmostEqual(rlist[1].x1(), 12.5)
+        self.assertAlmostEqual(rlist[1].y0(), 1)
+        self.assertAlmostEqual(rlist[1].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[2].x0(), 13)
+        self.assertAlmostEqual(rlist[2].x1(), 14)
+        self.assertAlmostEqual(rlist[2].y0(), 1)
+        self.assertAlmostEqual(rlist[2].y1(), 2)
+        
+        rlist = [Rect(0,1,1,2), Rect(0,1,1,2), Rect(0,1,1,2)]
+        n = justifyX(rlist, 10, 14, 0.6)
+        #print rlist[0], rlist[1], rlist[2]
+        self.assertEqual(n, 2)
+        
+        self.assertAlmostEqual(rlist[0].x0(), 10)
+        self.assertAlmostEqual(rlist[0].x1(), 11)
+        self.assertAlmostEqual(rlist[0].y0(), 1)
+        self.assertAlmostEqual(rlist[0].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[1].x0(), 13)
+        self.assertAlmostEqual(rlist[1].x1(), 14)
+        self.assertAlmostEqual(rlist[1].y0(), 1)
+        self.assertAlmostEqual(rlist[1].y1(), 2)
+        
+        self.assertAlmostEqual(rlist[2].x0(), 0)
+        self.assertAlmostEqual(rlist[2].x1(), 1)
+        self.assertAlmostEqual(rlist[2].y0(), 1)
+        self.assertAlmostEqual(rlist[2].y1(), 2)
+        
+

@@ -50,6 +50,18 @@ class Rect:
     def p1(self):
         """ Return the top-right point """
         return self._p1;
+    
+    def x0(self):
+        return self._p0.x();
+
+    def y0(self):
+        return self._p0.y();
+
+    def x1(self):
+        return self._p1.x();
+
+    def y1(self):
+        return self._p1.y();
 
     def __str__(self):
         """ Convert to string (print) """
@@ -120,6 +132,11 @@ class Rect:
             raise Exception('Translation vector must have type Point')
         self._p0 += dp
         self._p1 += dp
+        
+    def move_x0(self, x):
+        """Move the Rect so its p0.x() == x. The width doesn't change."""
+        dx = x - self._p0.x()
+        self.translate(Point(dx,0))
 
     def adjust(self, dp0, dp1):
         """ Adjust the Rect by translating p0 and p1 by dp0 and dp1 respectively"""
@@ -193,3 +210,75 @@ class Rect:
             return True
         else:
             return self.contains( p.p0() ) and self.contains( p.p1() )
+
+def _justifyX(rectList, xstart, xend):
+    """Justify a list of rectangles along x axis without checking if they will fit.
+    
+    Args:
+        rectList: a list of rectangles.
+        xstart (float): lower x bound.
+        xend (float): upper x bound.
+    """
+    n = len(rectList)
+    if n == 0:
+        return
+    elif n == 1:
+        rectList[0].move_x0(xstart)
+        return
+    # the width to fill
+    jwidth = float(xend - xstart)
+    # the sum of widths of all the rects
+    rwidth = 0.0
+    for r in rectList:
+        rwidth += r.width()
+    # the separation between rects
+    dx = ( jwidth - rwidth ) / ( n - 1 )
+    rectList[0].move_x0(xstart)
+    for i in range(1,n):
+        rectList[i].move_x0( rectList[i-1].x1() + dx )
+        
+def _nXFit(rectList, xstart, xend, dx = 0):
+    """Find first n Rects in a list that fit together in interval [xstart, xend] with minimum
+    distance between rects dx.
+    """
+    # the width to fill
+    jwidth = float(xend - xstart)
+    # find the max number of rects that can fit into jwidth without overlapping
+    rwidth = 0.0
+    n = 0
+    for i in range(len(rectList)):
+        rwidth += rectList[i].width()
+        if i > 0:
+            rwidth += dx
+        if rwidth <= jwidth:
+            n = i + 1
+        else:
+            break
+    return n
+    
+
+def justifyX(rectList, xstart, xend, dx = 0):
+    """Justify a list of rectangles along x axis.
+    
+    Args:
+        rectList: a list of rectangles.
+        xstart (float): lower x bound.
+        xend (float): upper x bound.
+        dx (float): minimum distance between rects.
+    
+    Return: number of rects moved. If it is smaller than the length of the list
+        than all rects could not fit into the range.
+    """
+    
+    n = _nXFit(rectList, xstart, xend, dx)
+    
+    if n == 0:
+        return n
+    
+    _justifyX(rectList[:n], xstart, xend)
+    
+    return n
+
+
+def alignLeft(rectList, xstart, xend, dx):
+    pass
