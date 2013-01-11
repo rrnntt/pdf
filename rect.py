@@ -240,6 +240,15 @@ def _justifyX(rectList, xstart, xend):
 def _nXFit(rectList, xstart, xend, dx = 0):
     """Find first n Rects in a list that fit together in interval [xstart, xend] with minimum
     distance between rects dx.
+    
+    Args:
+        rectList: a list of rectangles.
+        xstart (float): lower x bound.
+        xend (float): upper x bound.
+        dx (float): minimum distance between rects.
+    
+    Return:
+        tuple (n, width taken by first n rects separated by dx)
     """
     # the width to fill
     jwidth = float(xend - xstart)
@@ -253,8 +262,11 @@ def _nXFit(rectList, xstart, xend, dx = 0):
         if rwidth <= jwidth:
             n = i + 1
         else:
+            rwidth -= rectList[i].width()
+            if i > 0:
+                rwidth -= dx
             break
-    return n
+    return n,rwidth
     
 
 def justifyX(rectList, xstart, xend, dx = 0):
@@ -270,7 +282,7 @@ def justifyX(rectList, xstart, xend, dx = 0):
         than all rects could not fit into the range.
     """
     
-    n = _nXFit(rectList, xstart, xend, dx)
+    n,rwidth = _nXFit(rectList, xstart, xend, dx)
     
     if n == 0:
         return n
@@ -281,4 +293,45 @@ def justifyX(rectList, xstart, xend, dx = 0):
 
 
 def alignLeft(rectList, xstart, xend, dx):
-    pass
+    """Left align a list of rectangles along x axis.
+    
+    Args:
+        rectList: a list of rectangles.
+        xstart (float): lower x bound.
+        xend (float): upper x bound.
+        dx (float): minimum distance between rects.
+    
+    Return: number of rects moved. If it is smaller than the length of the list
+        than all rects could not fit into the range.
+    """
+    
+    n,rwidth = _nXFit(rectList, xstart, xend, dx)
+    
+    if n == 0:
+        return n
+    
+    _justifyX(rectList[:n], xstart, xstart + rwidth)
+    
+    return n
+
+def alignRight(rectList, xstart, xend, dx):
+    """Right align a list of rectangles along x axis.
+    
+    Args:
+        rectList: a list of rectangles.
+        xstart (float): lower x bound.
+        xend (float): upper x bound.
+        dx (float): minimum distance between rects.
+    
+    Return: number of rects moved. If it is smaller than the length of the list
+        than all rects could not fit into the range.
+    """
+    
+    n,rwidth = _nXFit(rectList, xstart, xend, dx)
+    
+    if n == 0:
+        return n
+    
+    _justifyX(rectList[:n], xend - rwidth, xend)
+    
+    return n
