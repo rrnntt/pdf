@@ -123,6 +123,7 @@ class TestLatexParsers(unittest.TestCase):
         s += r'\alpha, \beta, \gamma'
         p.match( s )
         self.assertTrue( p.hasMatch() )
+        p.docItem.textAlignment = 'c'
         pdf=FPDF()
         pdf.add_page()
         pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)

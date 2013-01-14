@@ -340,3 +340,28 @@ def alignRight(rectList, xstart, xend, dx):
     _justifyX(rectList[:n], xend - rwidth, xend)
     
     return n
+
+def center(rectList, xstart, xend, dx):
+    """Center align a list of rectangles along x axis.
+    
+    Args:
+        rectList: a list of rectangles.
+        xstart (float): lower x bound.
+        xend (float): upper x bound.
+        dx (float): minimum distance between rects.
+    
+    Return: number of rects moved. If it is smaller than the length of the list
+        than all rects could not fit into the range.
+    """
+    
+    n,rwidth = _nXFit(rectList, xstart, xend, dx)
+    
+    if n == 0:
+        return n
+    
+    c = ( xstart + xend ) / 2
+    w = rwidth / 2
+    
+    _justifyX(rectList[:n], c - w, c + w)
+    
+    return n

@@ -34,57 +34,64 @@ symbols = {'alpha': u'\u03b1',
            'psi': u'\u03c6',
           }
 
-class Word(DocItem):
+textAlignments = {'j': rect.justifyX,
+                  'l': rect.alignLeft,
+                  'r': rect.alignRight,
+                  'c': rect.center,
+                 }
+
+class TextItem(DocItem):
+    """Prints some form of text"""
+    def __init__(self):
+        DocItem.__init__(self)
+
+    def writePDF(self, pdf = None):
+        """Write itself to a FPDF object.
+        
+        Args:
+            pdf (FPDF): the FPDF object to write to.
+        """
+        return self.getText()
+    
+    def resizePDF(self, pdf):
+        """Resize internal Rect according to current settings of pdf"""
+        width = pdf.get_string_width( self.getText() )
+        height = pdf.font_size_pt / pdf.k
+        self.rect = Rect( 0, 0, width, height )
+    
+    def cellPDF(self, pdf):
+        r = self.rect
+        pdf.set_y( r.y0() )
+        pdf.set_x( r.x0() )
+        pdf.cell( r.width(), r.height(), self.getText() )
+        
+class Word(TextItem):
     """Prints a word"""
     def __init__(self, name):
-        DocItem.__init__(self)
+        TextItem.__init__(self)
         self.name = name
         
-    def writePDF(self, pdf = None):
-        """Write itself to a FPDF object.
-        
-        Args:
-            pdf (FPDF): the FPDF object to write to.
-        """
+    def getText(self):
+        """'Virtual' method returning text of this item."""
         return self.name
-    
-    def resizePDF(self, pdf):
-        """Resize internal Rect according to current settings of pdf"""
-        width = pdf.get_string_width( self.name )
-        height = pdf.font_size_pt / pdf.k
-        self.rect = Rect( 0, 0, width, height )
-    
-    def cellPDF(self, pdf):
-        pdf.cell( self.rect.width(), self.rect.height(), self.name )
         
-class Symbol(DocItem):
+class Symbol(TextItem):
     """Prints a symbol or word wich can be output as a unicode string"""
     def __init__(self, name):
-        DocItem.__init__(self)
+        TextItem.__init__(self)
         self.name = name
         
-    def writePDF(self, pdf = None):
-        """Write itself to a FPDF object.
-        
-        Args:
-            pdf (FPDF): the FPDF object to write to.
-        """
+    def getText(self):
+        """'Virtual' method returning text of this item."""
         return symbols[self.name]
-    
-    def resizePDF(self, pdf):
-        """Resize internal Rect according to current settings of pdf"""
-        width = pdf.get_string_width( symbols[self.name] )
-        height = pdf.font_size_pt / pdf.k
-        self.rect = Rect( 0, 0, width, height )
-    
-    def cellPDF(self, pdf):
-        pdf.cell( self.rect.width(), self.rect.height(), symbols[self.name] )
         
 class Paragraph(DocItem):
     """Paragraph of a documant."""
     def __init__(self, width = -1):
         DocItem.__init__(self)
         self.width = width
+        # possible alignments: j (justify), l (left), r (right), c (center)
+        self.textAlignment = 'j'
         
         
     def appendItem(self, item):
@@ -113,25 +120,24 @@ class Paragraph(DocItem):
             
         for r in rectList:
             r.translate(rect.Point(0,pdf.t_margin))
+            
+        alignFunction = textAlignments[self.textAlignment]
+        
         onFirstLine = True
         while len( rectList ) > 0:
-            n = rect.justifyX(rectList, pdf.l_margin, self.width, self.space)
-            if n == len( rectList ):
+            n = alignFunction(rectList, pdf.l_margin, self.width, self.space)
+            if n == len( rectList ) and self.textAlignment == 'j':
                 rect.alignLeft(rectList, pdf.l_margin, self.width, self.space)
             if not onFirstLine:
                 for r in rectList:
                     r.translate(rect.Point(0,self.lineHeight))
-                print 'break line'
             onFirstLine = False
             del rectList[:n]
             
     def cellPDF(self, pdf):
-        print self.width, pdf.l_margin, pdf.r_margin
+        """Output the paragraph to PDF"""
         for item in self.items:
             if item:
-                r = item.rect
-                pdf.set_y( r.y0() )
-                pdf.set_x( r.x0() )
                 item.cellPDF(pdf)
                 
         
