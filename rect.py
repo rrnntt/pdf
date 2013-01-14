@@ -138,6 +138,11 @@ class Rect:
         dx = x - self._p0.x()
         self.translate(Point(dx,0))
 
+    def move_y0(self, y):
+        """Move the Rect so its p0.y() == y. The width doesn't change."""
+        dy = y - self._p0.y()
+        self.translate(Point(0, dy))
+
     def adjust(self, dp0, dp1):
         """ Adjust the Rect by translating p0 and p1 by dp0 and dp1 respectively"""
         self._p0 += dp0

@@ -1,5 +1,7 @@
 """Simple latex parser"""
 from string_parser import *
+import rect
+from rect import Rect
 
 class DocItem:
     """An item of a document. Can be simple or complex. Complex items contain other items."""
@@ -45,6 +47,15 @@ class Word(DocItem):
             pdf (FPDF): the FPDF object to write to.
         """
         return self.name
+    
+    def resizePDF(self, pdf):
+        """Resize internal Rect according to current settings of pdf"""
+        width = pdf.get_string_width( self.name )
+        height = pdf.font_size_pt / pdf.k
+        self.rect = Rect( 0, 0, width, height )
+    
+    def cellPDF(self, pdf):
+        pdf.cell( self.rect.width(), self.rect.height(), self.name )
         
 class Symbol(DocItem):
     """Prints a symbol or word wich can be output as a unicode string"""
@@ -60,16 +71,21 @@ class Symbol(DocItem):
         """
         return symbols[self.name]
     
-class BoxItem(DocItem):
-    """More complex than Word or Symbol"""
-    def __init__(self):
-        DocItem.__init__(self)
-    pass
+    def resizePDF(self, pdf):
+        """Resize internal Rect according to current settings of pdf"""
+        width = pdf.get_string_width( symbols[self.name] )
+        height = pdf.font_size_pt / pdf.k
+        self.rect = Rect( 0, 0, width, height )
+    
+    def cellPDF(self, pdf):
+        pdf.cell( self.rect.width(), self.rect.height(), symbols[self.name] )
         
-class Paragraph(BoxItem):
+class Paragraph(DocItem):
     """Paragraph of a documant."""
-    def __init__(self):
-        BoxItem.__init__(self)
+    def __init__(self, width = -1):
+        DocItem.__init__(self)
+        self.width = width
+        
         
     def appendItem(self, item):
         """Append a document item to the paragraph."""
@@ -82,6 +98,43 @@ class Paragraph(BoxItem):
             if item:
                 res += item.writePDF(pdf) + ' '
         return res
+    
+    def resizePDF(self, pdf):
+        if self.width <= 0:
+            self.width = pdf.fw - pdf.l_margin - pdf.r_margin
+        self.space = pdf.get_string_width(' ')
+        self.lineHeight = pdf.font_size_pt / pdf.k * 1.2
+            
+        rectList = []
+        for item in self.items:
+            if item:
+                item.resizePDF(pdf)
+                rectList.append( item.rect )
+            
+        for r in rectList:
+            r.translate(rect.Point(0,pdf.t_margin))
+        onFirstLine = True
+        while len( rectList ) > 0:
+            n = rect.justifyX(rectList, pdf.l_margin, self.width, self.space)
+            if n == len( rectList ):
+                rect.alignLeft(rectList, pdf.l_margin, self.width, self.space)
+            if not onFirstLine:
+                for r in rectList:
+                    r.translate(rect.Point(0,self.lineHeight))
+                print 'break line'
+            onFirstLine = False
+            del rectList[:n]
+            
+    def cellPDF(self, pdf):
+        print self.width, pdf.l_margin, pdf.r_margin
+        for item in self.items:
+            if item:
+                r = item.rect
+                pdf.set_y( r.y0() )
+                pdf.set_x( r.x0() )
+                item.cellPDF(pdf)
+                
+        
 
 """ commands without arguments """
 command_names_0 = {'alpha':Symbol, 'beta':Symbol, 'gamma': Symbol}

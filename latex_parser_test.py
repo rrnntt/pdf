@@ -88,3 +88,46 @@ class TestLatexParsers(unittest.TestCase):
         pdf.set_font('DejaVu','',11)
         pdf.write(10, p.docItem.writePDF())
         pdf.output('test.pdf', 'F')
+
+    def test_Word_cellPDF(self):
+        
+        p = lp.WordParser()
+        s = r'alpha\beta'
+        p.match(s)
+        self.assertTrue( p.hasMatch() )
+        self.assertEquals( p.getMatch(s), 'alpha')
+        pdf=FPDF()
+        pdf.add_page()
+        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
+        pdf.set_font('times','',11)
+        p.docItem.resizePDF( pdf )
+        p.docItem.cellPDF( pdf )
+        pdf.cell(10)
+        p.docItem.cellPDF( pdf )
+        pdf.ln(10)
+        p.docItem.cellPDF( pdf )
+
+        p = lp.CommandParser()
+        p.match(r'\alpha')
+        pdf.set_font('DejaVu','',11)
+        p.docItem.resizePDF( pdf )
+        p.docItem.cellPDF( pdf )
+        
+        pdf.output('test_Word_cellPDF.pdf', 'F')
+        
+
+    def test_Paragraph_cellPDF(self):
+        
+        p = lp.ParagraphParser()
+        s = 'The year 1866 was marked by a bizarre development, an unexplained and downright  inexplicable phenomenon that surely no one has forgotten. Without getting into those rumors that upset civilians in the seaports and deranged the public'
+        s += r'\alpha, \beta, \gamma'
+        p.match( s )
+        self.assertTrue( p.hasMatch() )
+        pdf=FPDF()
+        pdf.add_page()
+        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
+        pdf.set_font('DejaVu','',16)
+        p.docItem.resizePDF(pdf)
+        p.docItem.cellPDF(pdf)
+        pdf.output('test_Paragraph_cellPDF.pdf', 'F')
+        
