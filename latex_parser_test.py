@@ -9,13 +9,13 @@ class TestLatexParsers(unittest.TestCase):
     
     def test_CommandParser(self):
         
-        p = lp.CommandParser()
+        p = lp.CommandParser(lp.ParagraphItemCreator)
         s = '\\alpha \\beta'
         p.match( s )
         self.assertTrue( p.hasMatch() )
         self.assertEquals( p.getMatch(s), '\\alpha')
         
-        p = lp.CommandParser()
+        p = lp.CommandParser(lp.ParagraphItemCreator)
         s = '\\ALPHA \\beta'
         p.match( s )
         self.assertFalse( p.hasMatch() )
@@ -26,7 +26,7 @@ class TestLatexParsers(unittest.TestCase):
         pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
         pdf.set_font('DejaVu','',16)
         
-        p = lp.ListParser( lp.CommandParser() )
+        p = lp.ListParser( lp.CommandParser(lp.ParagraphItemCreator) )
         s = r'\alpha\beta\gamma'
         p.match( s )
         self.assertTrue( p.hasMatch() )
@@ -114,7 +114,7 @@ class TestLatexParsers(unittest.TestCase):
         
         r = p.docItem.rect
 
-        p = lp.CommandParser()
+        p = lp.CommandParser(lp.ParagraphItemCreator)
         p.match(r'\alpha')
         pdf.set_font('DejaVu','',11)
 

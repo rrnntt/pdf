@@ -209,7 +209,7 @@ class Paragraph(DocItem):
                     pdf.set_font(f[0],f[1],f[2])
                 item.cellPDF(pdf)
                 
-        pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
+        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
                 
                 
 class Title(Paragraph):
@@ -230,14 +230,25 @@ class Title(Paragraph):
 ######################################################################################
 #        Parsers
 ######################################################################################
-""" commands without arguments """
-command_names_0 = {}
-
+""" Commands without arguments:
+Dictionaries containing DocItem class names with constructors taking
+a single argument - the command name
+"""
+# command names for commands which can be found inside a paragraph
+para_command_names_0 = {}
 for name,code in symbols.iteritems():
-    command_names_0[name] = Symbol
+    para_command_names_0[name] = Symbol
+    
+# names for commands appearing outside paragraphs
+doc_command_names_0 = {}
 
-#command_names_1 = {'title': Title,
-#                  }
+""" Commands with 1 arguments:
+Dictionaries containing DocItem class names with constructors taking
+two arguments: the command name, and the argument
+"""
+# names for commands appearing outside paragraphs
+doc_command_names_1 = {'title': Title,
+                  }
 
 class LatexParser(Parser):
     """Base class for latex parsers."""
@@ -253,16 +264,17 @@ class LatexParser(Parser):
 
 class CommandParser(LatexParser):
     """Parses a latex command of the form: \command_name ."""
-    def __init__(self, mode = 'text'):
+    def __init__(self, creator, mode = 'text'):
         """Constructor."""
         LatexParser.__init__(self, mode)
         self._nameParser = SeqParser()
         self._nameParser.addParser( CharParser('\\') )
         self._nameParser.addParser( AlphaParser() )
+        self.creator = creator
         
     def clone(self):
         """Implement cloning"""
-        return CommandParser()
+        return CommandParser(self.creator, self._mode)
     
     def _test(self, s, start, end):
         """Implements the match test."""
@@ -271,8 +283,11 @@ class CommandParser(LatexParser):
             return (False, 0)
 
         name = self._nameParser[1].getMatch(s)        
-        if name in command_names_0:
-            self.docItem = command_names_0[name](name)
+#        if name in command_names_0:
+#            self.docItem = command_names_0[name](name)
+#            return (True, self._nameParser.getEnd() - start)
+        self.docItem = self.creator(name)
+        if self.docItem: 
             return (True, self._nameParser.getEnd() - start)
         
         return (False, 0)
@@ -296,6 +311,11 @@ class WordParser(LatexParser):
         self.docItem = Word(self.parser.getMatch(s))
         return (True, self.parser.getEnd() - start)
     
+def ParagraphItemCreator(cmd_name, arg1 = None):
+    if cmd_name in para_command_names_0:
+        return para_command_names_0[cmd_name](cmd_name)
+    return None
+        
     
 class ParagraphItemParser(LatexParser):
     """Parser for an item in a paragraph: a word or a command."""
@@ -303,7 +323,7 @@ class ParagraphItemParser(LatexParser):
         """Constructor."""
         LatexParser.__init__(self, mode)
         self.parser = AltParser()
-        self.parser.addParser( CommandParser(mode) )
+        self.parser.addParser( CommandParser(ParagraphItemCreator, mode) )
         self.parser.addParser( WordParser(mode) )
         
     def clone(self):
@@ -350,3 +370,11 @@ class ParagraphParser(LatexParser):
         self.docItem = para
             
         return (True, self.parser.getEnd() - start)
+
+#def DocumentItemCreator(cmd_name, arg1 = None):
+#    if arg1:
+#        if cmd_name in doc_command_names_1:
+#            item = 
+#            return doc_command_names_0[cmd_name](cmd_name)
+#    return None
+        
