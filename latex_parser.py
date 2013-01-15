@@ -3,6 +3,9 @@ from string_parser import *
 import rect
 from rect import Rect
 
+######################################################################################
+#     Document items
+######################################################################################
 class DocItem:
     """An item of a document. Can be simple or complex. Complex items contain other items."""
     def __init__(self):
@@ -12,33 +15,72 @@ class DocItem:
 symbols = {'alpha': u'\u03b1',
            'beta': u'\u03b2',
            'gamma': u'\u03b3',
-           'delta': u'\u03b3',
-           'epsilon': u'\u03b4',
-           'zeta': u'\u03b5',
-           'eta': u'\u03b6',
-           'theta': u'\u03b7',
-           'iiii': u'\u03b8',
-           'kappa': u'\u03b9',
-           'lambda': u'\u03ba',
-           'mu': u'\u03bb',
-           'nu': u'\u03bc',
-           'xi': u'\u03bd',
-           'oooo': u'\u03be',
-           'pi': u'\u03bf',
-           'rho': u'\u03c0',
-           '?': u'\u03c1',
-           'tau': u'\u03c2',
-           'u': u'\u03c3',
-           'phi': u'\u03c4',
-           'chi': u'\u03c5',
-           'psi': u'\u03c6',
-          }
+           'delta': u'\u03b4',
+           'epsilon': u'\u03b5',
+           'zeta': u'\u03b6',
+           'eta': u'\u03b7',
+           'theta': u'\u03b8',
+           'iota': u'\u03b9',
+           'kappa': u'\u03ba',
+           'lambda': u'\u03bb',
+           'mu': u'\u03bc',
+           'nu': u'\u03bd',
+           'xi': u'\u03be',
+           'omicron': u'\u03bf',
+           'pi': u'\u03c0',
+           'rho': u'\u03c1',
+           'varsigma': u'\u03c2',
+           'sigma': u'\u03c3',
+           'tau': u'\u03c4',
+           'upsilon': u'\u03c5',
+           'varphi': u'\u03c6',
+           'chi': u'\u03c7',
+           'psi': u'\u03c8',
+           'omega': u'\u03c9',
+           'phi': u'\u03d5',
+           
+           'Alpha': u'\u0391',
+           'Beta': u'\u0392',
+           'Gamma': u'\u0393',
+           'Delta': u'\u0394',
+           'Epsilon': u'\u0395',
+           'Zeta': u'\u0396',
+           'Eta': u'\u0397',
+           'Theta': u'\u0398',
+           'Iota': u'\u0399',
+           'Kappa': u'\u039a',
+           'Lambda': u'\u039b',
+           'Mu': u'\u039c',
+           'Nu': u'\u039d',
+           'Xi': u'\u039e',
+           'Omicron': u'\u039f',
+           'Pi': u'\u03a0',
+           'Rho': u'\u03a1',
+           'Sigma': u'\u03a3',
+           'Tau': u'\u03a4',
+           'Upsilon': u'\u03a5',
+           'Phi': u'\u03a6',
+           'Chi': u'\u03a7',
+           'Psi': u'\u03a8',
+           'Omega': u'\u03a9',          
+           }
 
 textAlignments = {'j': rect.justifyX,
                   'l': rect.alignLeft,
                   'r': rect.alignRight,
                   'c': rect.center,
                  }
+
+styles = {'body': ('times', '', 12),
+          'title': ('times', 'B', 16),
+          'symbol': ('DejaVu','', 12),
+         }
+
+def initPDF(pdf):
+    """Set up a FPDF object to work with latex parsers"""
+    pdf.add_page()
+    pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
+
 
 class TextItem(DocItem):
     """Prints some form of text"""
@@ -53,11 +95,11 @@ class TextItem(DocItem):
         """
         return self.getText()
     
-    def resizePDF(self, pdf):
+    def resizePDF(self, pdf, x = 0, y = 0):
         """Resize internal Rect according to current settings of pdf"""
         width = pdf.get_string_width( self.getText() )
         height = pdf.font_size_pt / pdf.k
-        self.rect = Rect( 0, 0, width, height )
+        self.rect = Rect( x, y, x + width, y + height )
     
     def cellPDF(self, pdf):
         r = self.rect
@@ -70,6 +112,7 @@ class Word(TextItem):
     def __init__(self, name):
         TextItem.__init__(self)
         self.name = name
+        self.style = 'body'
         
     def getText(self):
         """'Virtual' method returning text of this item."""
@@ -80,6 +123,7 @@ class Symbol(TextItem):
     def __init__(self, name):
         TextItem.__init__(self)
         self.name = name
+        self.style = 'symbol'
         
     def getText(self):
         """'Virtual' method returning text of this item."""
@@ -106,45 +150,94 @@ class Paragraph(DocItem):
                 res += item.writePDF(pdf) + ' '
         return res
     
-    def resizePDF(self, pdf):
+    def resizePDF(self, pdf, x = 0, y = 0):
+        """Calculate the sizes of all items in the paragraph.
+        
+        Args:
+            pdf (FPDF): the pdf object.
+            x, y (float): coordinates of the top-left corner of the paragraph relative to the page's
+                margins.
+        """
+        style = 'body'
+        f = styles[style]
+        pdf.set_font(f[0],f[1],f[2])
         if self.width <= 0:
-            self.width = pdf.fw - pdf.l_margin - pdf.r_margin
+            self.width = pdf.fw - pdf.l_margin - pdf.r_margin - x
         self.space = pdf.get_string_width(' ')
         self.lineHeight = pdf.font_size_pt / pdf.k * 1.2
-            
+        self.rect = Rect()
+        
+        y += pdf.t_margin
         rectList = []
+        # resize individual items and collect their Rects
         for item in self.items:
             if item:
-                item.resizePDF(pdf)
+                if item.style != style:
+                    style = item.style
+                    f = styles[style]
+                    pdf.set_font(f[0],f[1],f[2])
+                item.resizePDF(pdf, 0, y)
                 rectList.append( item.rect )
             
-        for r in rectList:
-            r.translate(rect.Point(0,pdf.t_margin))
+        # position the items on the page
             
         alignFunction = textAlignments[self.textAlignment]
         
+        xstart = pdf.l_margin + x
+        xend = pdf.l_margin + x + self.width
         onFirstLine = True
         while len( rectList ) > 0:
-            n = alignFunction(rectList, pdf.l_margin, self.width, self.space)
+            n = alignFunction(rectList, xstart, xend, self.space)
             if n == len( rectList ) and self.textAlignment == 'j':
-                rect.alignLeft(rectList, pdf.l_margin, self.width, self.space)
+                rect.alignLeft(rectList, xstart, xend, self.space)
             if not onFirstLine:
                 for r in rectList:
                     r.translate(rect.Point(0,self.lineHeight))
+            for r in rectList[:n]:
+                self.rect.unite(r)
             onFirstLine = False
             del rectList[:n]
             
     def cellPDF(self, pdf):
         """Output the paragraph to PDF"""
+        style = ''
         for item in self.items:
             if item:
+                if item.style != style:
+                    style = item.style
+                    f = styles[style]
+                    pdf.set_font(f[0],f[1],f[2])
                 item.cellPDF(pdf)
                 
+        pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
+                
+                
+class Title(Paragraph):
+    """Print a document title."""
+    def __init__(self, width = -1):
+        Paragraph.__init__(self, width)
+        self.textAlignment = 'c'
         
-
+    def resizePDF(self, pdf, x = 0, y = 0):
+        if self.width <= 0:
+            self.width = pdf.fw - pdf.l_margin - pdf.r_margin - x
+            self.width *= 0.8
+        for item in self.items:
+            item.style = 'title'
+        Paragraph.resizePDF(self, pdf, x, y)
+        
+        
+######################################################################################
+#        Parsers
+######################################################################################
 """ commands without arguments """
-command_names_0 = {'alpha':Symbol, 'beta':Symbol, 'gamma': Symbol}
+command_names_0 = {}
 
+for name,code in symbols.iteritems():
+    command_names_0[name] = Symbol
+
+#command_names_1 = {'title': Title,
+#                  }
 
 class LatexParser(Parser):
     """Base class for latex parsers."""

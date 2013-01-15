@@ -154,14 +154,32 @@ class Rect:
         y0 = self._p0.y()
         x1 = self._p1.x()
         y1 = self._p1.y()
-        if (p.x() - x0) / self.xSpan() < 0:
+        xspan = self.xSpan()
+        yspan = self.ySpan()
+        if x0 == 0 and y0 == 0 and x1 == 0 and y1 == 0:
             x0 = p.x()
-        elif (p.x() - x1) / self.xSpan() > 0:
-            x1 = p.x();
-        if (p.y() - y0) / self.ySpan() < 0:
             y0 = p.y()
-        elif (p.y() - y1) / self.ySpan() > 0:
-            y1 = p.y()
+            x1 = x0
+            y1 = y0
+        else:
+            if xspan == 0:
+                if p.x() < x0:
+                    x0 = p.x()
+                if p.x() > x1:
+                    x1 = p.x()
+            elif (p.x() - x0) / self.xSpan() < 0:
+                x0 = p.x()
+            elif (p.x() - x1) / self.xSpan() > 0:
+                x1 = p.x();
+            if yspan == 0:
+                if p.y() < y0:
+                    y0 = p.y()
+                if p.y() > y1:
+                    y1 = p.y()
+            elif (p.y() - y0) / self.ySpan() < 0:
+                y0 = p.y()
+            elif (p.y() - y1) / self.ySpan() > 0:
+                y1 = p.y()
         self._p0 = Point(x0,y0)
         self._p1 = Point(x1,y1)
         

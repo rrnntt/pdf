@@ -3,6 +3,8 @@ import unittest
 import latex_parser as lp
 from fpdf import FPDF
 
+long_string = 'The year 1866 was marked by a bizarre development, an unexplained and downright  inexplicable phenomenon that surely no one has forgotten. Without getting into those rumors that upset civilians in the seaports and deranged the public'
+
 class TestLatexParsers(unittest.TestCase):
     
     def test_CommandParser(self):
@@ -14,7 +16,7 @@ class TestLatexParsers(unittest.TestCase):
         self.assertEquals( p.getMatch(s), '\\alpha')
         
         p = lp.CommandParser()
-        s = '\\Alpha \\beta'
+        s = '\\ALPHA \\beta'
         p.match( s )
         self.assertFalse( p.hasMatch() )
 
@@ -32,7 +34,7 @@ class TestLatexParsers(unittest.TestCase):
         self.assertEquals( res, u'\u03b1 \u03b2 \u03b3')
         
         pdf.write(0, res)
-        pdf.output('HelloWorld.pdf', 'F')
+        pdf.output('test_greek_letters.pdf', 'F')
         
     def test_WordParser(self):
         
@@ -100,17 +102,23 @@ class TestLatexParsers(unittest.TestCase):
         pdf.add_page()
         pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
         pdf.set_font('times','',11)
+        
         p.docItem.resizePDF( pdf )
         p.docItem.cellPDF( pdf )
-        pdf.cell(10)
+
+        p.docItem.resizePDF( pdf, p.docItem.rect.x1() + 10, p.docItem.rect.y0() )
         p.docItem.cellPDF( pdf )
-        pdf.ln(10)
+
+        p.docItem.resizePDF( pdf, p.docItem.rect.x1() + 10, p.docItem.rect.y0() )
         p.docItem.cellPDF( pdf )
+        
+        r = p.docItem.rect
 
         p = lp.CommandParser()
         p.match(r'\alpha')
         pdf.set_font('DejaVu','',11)
-        p.docItem.resizePDF( pdf )
+
+        p.docItem.resizePDF( pdf, r.x1() + 10, r.y0() )
         p.docItem.cellPDF( pdf )
         
         pdf.output('test_Word_cellPDF.pdf', 'F')
@@ -131,4 +139,78 @@ class TestLatexParsers(unittest.TestCase):
         p.docItem.resizePDF(pdf)
         p.docItem.cellPDF(pdf)
         pdf.output('test_Paragraph_cellPDF.pdf', 'F')
+        
+    def test_initPDF(self):
+        
+        p = lp.ParagraphParser()
+        s = 'The year 1866 was marked by a bizarre development'
+        s += r' \alpha, \beta, \gamma Hello!'
+        p.match( s )
+        self.assertTrue( p.hasMatch() )
+        doc = p.docItem
+        pdf=FPDF()
+        lp.initPDF(pdf)
+        doc.resizePDF(pdf)
+        doc.cellPDF(pdf)
+        pdf.output('test_initPDF.pdf', 'F')
+        
+    def test_Greek(self):
+        
+        p = lp.ParagraphParser()
+        s = r'alpha: \alpha, beta: \beta, gamma: \gamma, delta: \delta, epsilon: \epsilon, zeta: \zeta, eta: \eta, '
+        s += r'theta: \theta, iota: \iota, kappa: \kappa, lambda: \lambda, mu: \mu, nu: \nu, xi: \xi, omicron: \omicron, '
+        s += r'pi: \pi, rho: \rho, sigma: \sigma, varsigma: \varsigma, tau: \tau, upsilon: \upsilon, phi: \phi, varphi: \varphi, '
+        s += r'chi: \chi, psi: \psi, omega: \omega, '
+        s += r'Alpha: \Alpha, Beta: \Beta, Gamma: \Gamma, Delta: \Delta, Epsilon: \Epsilon, Zeta: \Zeta, Eta: \Eta, '
+        s += r'Theta: \Theta, Iota: \Iota, Kappa: \Kappa, Lambda: \Lambda, Mu: \Mu, Nu: \Nu, Xi: \Xi, Omicron: \Omicron, '
+        s += r'Pi: \Pi, Rho: \Rho, Sigma: \Sigma, Tau: \Tau, Upsilon: \Upsilon, Phi: \Phi, '
+        s += r'Chi: \Chi, Psi: \Psi, Omega: \Omega '
+        p.match( s )
+        self.assertTrue( p.hasMatch() )
+        doc = p.docItem
+        pdf=FPDF()
+        lp.initPDF(pdf)
+        doc.resizePDF(pdf)
+        doc.cellPDF(pdf)
+        pdf.output('test_greek.pdf', 'F')
+        
+    def test_Two_Paragraphs(self):
+        
+        s = long_string
+        pdf = FPDF()
+        lp.initPDF(pdf)
+
+        p1 = lp.ParagraphParser()
+        p1.match( s )
+        self.assertTrue( p1.hasMatch() )
+        par1 = p1.docItem
+        par1.resizePDF(pdf)
+        par1.cellPDF(pdf)
+
+        p2 = lp.ParagraphParser()
+        p2.match( s )
+        self.assertTrue( p1.hasMatch() )
+        par2 = p2.docItem
+        par2.resizePDF(pdf, 0, par1.rect.height() + 5)
+        par2.cellPDF(pdf)
+        
+        par2.resizePDF(pdf, 0, 40)
+        par2.cellPDF(pdf)
+        
+        par2.width = -1
+        par2.resizePDF(pdf, 20, 60)
+        par2.cellPDF(pdf)
+        
+        pdf.output('test_Two_Paragraphs.pdf', 'F')
+        
+    def test_Title(self):
+        
+        pdf = FPDF()
+        lp.initPDF(pdf)
+        title = lp.Title()
+        title.appendItem(lp.Word('The'))
+        title.appendItem(lp.Word('Title'))
+        title.resizePDF(pdf)
+        title.cellPDF(pdf)
+        pdf.output('test_Title.pdf', 'F')
         
