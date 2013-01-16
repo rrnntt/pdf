@@ -137,6 +137,18 @@ class Symbol(TextItem):
         return symbols[self.name]
         
 #---------------------------------------------------------------------------------
+class MathItem(DocItem):
+    """Prints some form of text"""
+    def __init__(self):
+        DocItem.__init__(self)
+
+#---------------------------------------------------------------------------------
+class InlineMathBlock(DocItem):
+    """Container for inline maths"""
+    def __init__(self):
+        DocItem.__init__(self)
+
+#---------------------------------------------------------------------------------
 class Paragraph(DocItem):
     """Paragraph of a documant."""
     def __init__(self, width = -1):
