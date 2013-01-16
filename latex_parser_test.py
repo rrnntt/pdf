@@ -134,8 +134,8 @@ class TestLatexParsers(unittest.TestCase):
         p.docItem.textAlignment = 'c'
         pdf=FPDF()
         pdf.add_page()
-        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
-        pdf.set_font('DejaVu','',16)
+        pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
+        pdf.set_font('symbol','',16)
         p.docItem.resizePDF(pdf)
         p.docItem.cellPDF(pdf)
         pdf.output('test_Paragraph_cellPDF.pdf', 'F')
@@ -213,4 +213,26 @@ class TestLatexParsers(unittest.TestCase):
         title.resizePDF(pdf)
         title.cellPDF(pdf)
         pdf.output('test_Title.pdf', 'F')
+        
+    def test_TitleParser(self):
+        pdf = FPDF()
+        lp.initPDF(pdf)
+        s = r'\title {The Title}  ' 
+        p = lp.TitleParser()
+        p.match( s )
+        self.assertTrue( p.hasMatch() )
+        p.docItem.resizePDF(pdf)
+        p.docItem.cellPDF(pdf)
+        pdf.output('test_TitleParser.pdf', 'F')
+        
+    def test_DocumentParser(self):
+        
+        p = lp.DocumentParser()
+        s = r'  \title { The Title}' + long_string + ' \n\n ' + long_string
+        p.match(s)
+        self.assertTrue( p.hasMatch() )
+        doc = p.docItem
+        doc.setPDF(FPDF())
+        doc.outputPDF('test_DocumentParser.pdf')
+        
         
