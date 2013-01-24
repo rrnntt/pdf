@@ -235,4 +235,19 @@ class TestLatexParsers(unittest.TestCase):
         doc.setPDF(FPDF())
         doc.outputPDF('test_DocumentParser.pdf')
         
+    def test_Paragraphs_with_maths(self):
+        
+        s = 'Hello, $$maths$$ maths!'
+        pdf = FPDF()
+        lp.initPDF(pdf)
+
+        p = lp.ParagraphParser()
+        p.match( s )
+        self.assertTrue( p.hasMatch() )
+        par = p.docItem
+        par.resizePDF(pdf)
+        par.cellPDF(pdf)
+        
+        pdf.output('test_Paragraphs_with_maths.pdf', 'F')
+        
         

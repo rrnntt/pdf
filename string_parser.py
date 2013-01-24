@@ -495,11 +495,7 @@ class BracketsParser(MultiParser):
         level = 1
         # find the closing bracket and the job is done
         while i < end:
-            # skip any inner brackets
-            if s.startswith(self._bra, i, end):
-                level += 1
-                i += l_bra
-            elif s.startswith(self._ket, i, end):
+            if s.startswith(self._ket, i, end):
                 level -= 1
                 if level == 0:
                     # the closing bracket is found: try to match the child parser
@@ -509,6 +505,10 @@ class BracketsParser(MultiParser):
                     else:
                         return (False, 0)
                 i += l_ket
+            # skip any inner brackets
+            elif s.startswith(self._bra, i, end):
+                level += 1
+                i += l_bra
             else:
                 i += 1
         # closing bracket was not found: failed

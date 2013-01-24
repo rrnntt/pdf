@@ -78,6 +78,7 @@ textAlignments = {'j': rect.justifyX,
 default_styles = {'body': ('times', '', 12),
           'title': ('times', 'B', 16),
           'symbol': ('symbol','', 12),
+          'math-var': ('times', 'I', 12),
          }
 
 def initPDF(pdf):
@@ -147,10 +148,39 @@ class InlineMathBlock(DocItem):
     """Container for inline maths"""
     def __init__(self):
         DocItem.__init__(self)
+        self.style = 'math-var'
+        # pointer to the local styles dict
+        self.styles = default_styles
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        self.rect = Rect(x,y,x,y)
+        dx = pdf.get_string_width(' ')
+        rectList = []
+        width = 0.0
+        for item in self.items:
+            if item:
+                item.resizePDF(pdf,x,y)
+                rectList.append(item.rect)
+                width += item.rect.width()
+                
+        rect.alignLeft(rectList, x, x+width, dx)
+        for r in rectList:
+            self.rect.unite(r)
+
+    def cellPDF(self, pdf):
+        """Output the paragraph to PDF"""
+        style = ''
+        for item in self.items:
+            if item:
+                if item.style != style:
+                    style = item.style
+                    f = self.styles[style]
+                    pdf.set_font(f[0],f[1],f[2])
+                item.cellPDF(pdf)
 
 #---------------------------------------------------------------------------------
 class Paragraph(DocItem):
-    """Paragraph of a documant."""
+    """Paragraph of a document."""
     def __init__(self, width = -1):
         DocItem.__init__(self)
         self.width = width
@@ -331,57 +361,57 @@ doc_command_names_1 = {'title': Title,
 class LatexParser(Parser):
     """Base class for latex parsers."""
     docItem = None
-    def __init__(self, mode = 'text'):
+    def __init__(self, mode = 'body'):
         """Constructor.
     
         Args:
-            mode (str): a latex mode: 'text' or 'math'
+            mode (str): a latex mode: 'body' or 'math'
         """
         Parser.__init__(self)
-        self._mode = mode
+        self.mode = mode
 
 #---------------------------------------------------------------------------------
 class CommandParser(LatexParser):
     """Parses a latex command of the form: \command_name ."""
-    def __init__(self, creator, mode = 'text'):
+    def __init__(self, creator, mode = 'body'):
         """Constructor."""
         LatexParser.__init__(self, mode)
-        self._nameParser = SeqParser()
-        self._nameParser.addParser( CharParser('\\') )
-        self._nameParser.addParser( AlphaParser() )
+        self.nameParser = SeqParser()
+        self.nameParser.addParser( CharParser('\\') )
+        self.nameParser.addParser( AlphaParser() )
         self.creator = creator
         
     def clone(self):
         """Implement cloning"""
-        return CommandParser(self.creator, self._mode)
+        return CommandParser(self.creator, self.mode)
     
     def _test(self, s, start, end):
         """Implements the match test."""
-        self._nameParser.match(s, start, end)
-        if not self._nameParser.hasMatch():
+        self.nameParser.match(s, start, end)
+        if not self.nameParser.hasMatch():
             return (False, 0)
 
-        name = self._nameParser[1].getMatch(s)        
+        name = self.nameParser[1].getMatch(s)        
 #        if name in command_names_0:
 #            self.docItem = command_names_0[name](name)
-#            return (True, self._nameParser.getEnd() - start)
+#            return (True, self.nameParser.getEnd() - start)
         self.docItem = self.creator(name)
         if self.docItem: 
-            return (True, self._nameParser.getEnd() - start)
+            return (True, self.nameParser.getEnd() - start)
         
         return (False, 0)
 
 #---------------------------------------------------------------------------------
 class WordParser(LatexParser):
     """Parses a normal word."""
-    def __init__(self, mode = 'text'):
+    def __init__(self, mode = 'body'):
         """Constructor."""
         LatexParser.__init__(self, mode)
         self.parser = AllNotCharParser(' \t\n\\')
         
     def clone(self):
         """Implement cloning"""
-        return WordParser(self._mode)
+        return WordParser(self.mode)
     
     def _test(self, s, start, end):
         """Implements the match test."""
@@ -389,6 +419,7 @@ class WordParser(LatexParser):
         if not self.parser.hasMatch():
             return (False, 0)
         self.docItem = Word(self.parser.getMatch(s))
+        self.docItem.style = self.mode
         return (True, self.parser.getEnd() - start)
     
 #---------------------------------------------------------------------------------
@@ -398,18 +429,95 @@ def ParagraphItemCreator(cmd_name, arg1 = None):
     return None
     
 #---------------------------------------------------------------------------------
+class InlineMathItemParser(LatexParser):
+    """Parser for an item in a paragraph: a word or a command."""
+    def __init__(self):
+        """Constructor."""
+        LatexParser.__init__(self)
+        self.parser = AltParser()
+        self.parser.addParser( WordParser('math-var') )
+        #self.parser.addParser( ParagraphParser() )
+        
+    def clone(self):
+        """Implement cloning"""
+        return InlineMathItemParser()
+
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        self.parser.match(s, start, end)
+        if not self.parser.hasMatch():
+            return (False, 0)
+        good = self.parser.goodParser()
+        if isinstance( good, LatexParser ):
+            self.docItem = good.docItem
+        else:
+            return (False, 0)
+        return (True, self.parser.getEnd() - start)
+    
+#---------------------------------------------------------------------------------
+class InlineMathParser(LatexParser):
+    """Parses a inlined (in line with text in a paragraph) math expression."""
+    def __init__(self, mode = 'body'):
+        """Constructor."""
+        LatexParser.__init__(self)
+        self.parser = SeqParser()
+        self.parser.addParser( ZeroOrMoreSpaces() )
+        self.itemParser = ListParser( (InlineMathItemParser(), ZeroOrMoreSpaces()) )
+        self.parser.addParser( self.itemParser )
+        
+    def clone(self):
+        """Implement cloning"""
+        return InlineMathParser()
+    
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        self.parser.match(s, start, end)
+        if not self.parser.hasMatch():
+            return (False, 0)
+
+        doc = InlineMathBlock()
+        n = len(self.itemParser)
+        for i in range(0,n,2):
+            p = self.itemParser[i]
+            if p.docItem:
+                doc.appendItem(p.docItem)
+        self.docItem = doc
+        return (True, self.parser.getEnd() - start)
+    
+#---------------------------------------------------------------------------------
+class ItemInBracketsParser(LatexParser):
+    """Parses a inlined (in line with text in a paragraph) math expression."""
+    def __init__(self, bra, ket, innerParser):
+        """Constructor."""
+        LatexParser.__init__(self)
+        self.parser = BracketsParser(bra, ket, innerParser)
+        
+    def clone(self):
+        """Implement cloning"""
+        return ItemInBracketsParser()
+    
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        self.parser.match(s, start, end)
+        if not self.parser.hasMatch():
+            return (False, 0)
+        self.docItem = self.parser[0].docItem
+        return (True, self.parser.getEnd() - start)
+    
+#---------------------------------------------------------------------------------
 class ParagraphItemParser(LatexParser):
     """Parser for an item in a paragraph: a word or a command."""
-    def __init__(self, mode = 'text'):
+    def __init__(self, mode = 'body'):
         """Constructor."""
         LatexParser.__init__(self, mode)
         self.parser = AltParser()
         self.parser.addParser( CommandParser(ParagraphItemCreator, mode) )
+        self.parser.addParser( ItemInBracketsParser('$$','$$',InlineMathParser()) )
         self.parser.addParser( WordParser(mode) )
         
     def clone(self):
         """Implement cloning"""
-        p = ParagraphItemParser(self._mode)
+        p = ParagraphItemParser(self.mode)
         return p
 
     def _test(self, s, start, end):
@@ -425,6 +533,7 @@ class ParagraphItemParser(LatexParser):
             self.docItem = Word(self.parser.getMatch(s))
         return (True, self.parser.getEnd() - start)
     
+#---------------------------------------------------------------------------------
 class ParagraphSpaces(Parser):
     """Match 1 or more consequtive empty space characters.
     
@@ -453,7 +562,7 @@ class ParagraphSpaces(Parser):
 #---------------------------------------------------------------------------------
 class ParagraphParser(LatexParser):
     """Parses a paragraph"""
-    def __init__(self, mode = 'text', paragraph = Paragraph):
+    def __init__(self, mode = 'body', paragraph = Paragraph):
         """Constructor."""
         LatexParser.__init__(self, mode)
         parsers = (ParagraphItemParser(), ParagraphSpaces())
@@ -462,7 +571,7 @@ class ParagraphParser(LatexParser):
 
     def clone(self):
         """Implement cloning"""
-        p = ParagraphParser(self._mode)
+        p = ParagraphParser(self.mode)
         return p
 
     def _test(self, s, start, end):
@@ -496,7 +605,7 @@ class TitleParser(LatexParser):
         self.parser.addParser( CharParser('\\') )
         self.parser.addParser( AlphaParser() ) 
         self.parser.addParser( ZeroOrMoreSpaces() ) 
-        self.textParser = ParagraphParser('text',Title)
+        self.textParser = ParagraphParser('body',Title)
         innerParser = SeqParser()
         innerParser.addParser(ZeroOrMoreSpaces())
         innerParser.addParser(self.textParser)
@@ -526,7 +635,7 @@ class TitleParser(LatexParser):
 #---------------------------------------------------------------------------------
 class DocumentItemParser(LatexParser):
     """Parser for an item in a paragraph: a word or a command."""
-    def __init__(self, mode = 'text'):
+    def __init__(self, mode = 'body'):
         """Constructor."""
         LatexParser.__init__(self, mode)
         self.parser = AltParser()
@@ -535,7 +644,7 @@ class DocumentItemParser(LatexParser):
         
     def clone(self):
         """Implement cloning"""
-        return DocumentItemParser(self._mode)
+        return DocumentItemParser(self.mode)
 
     def _test(self, s, start, end):
         """Implements the match test."""
