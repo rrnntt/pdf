@@ -43,6 +43,19 @@ class Rect:
             self._p0 = Point( x0 )
             self._p1 = Point( y0 )
                 
+    def __eq__(self, other):
+        """ Comparison == """
+        if isinstance(other, Rect):
+            return self._p0 == other._p0 and self._p1 == other._p1
+        return NotImplemented
+
+    def __ne__(self, other):
+        """ Comparison != """
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
+    
     def p0(self):
         """ Return the bottom-left point """
         return self._p0;
@@ -126,13 +139,16 @@ class Rect:
             self._p0.set( self._p0.x(), p.y() )
             self._p1.set( p.x(), self._p1.y() )
 
-    def translate(self, dp):
+    def translate(self, dx, dy = None):
         """ Translate this Rect by vector (Point) dp """
-        if not isinstance( dp, Point):
-            raise Exception('Translation vector must have type Point')
-        self._p0 += dp
-        self._p1 += dp
-        
+        if isinstance( dx, Point):
+            self._p0 += dx
+            self._p1 += dx
+        else:
+            dp = Point(dx,dy)
+            self._p0 += dp
+            self._p1 += dp
+            
     def move_x0(self, x):
         """Move the Rect so its p0.x() == x. The width doesn't change."""
         dx = x - self._p0.x()
@@ -188,8 +204,12 @@ class Rect:
         Unite this Rect with another. The result is that this Rect changes to
         include both former self and the other rect. 
         """
-        self.include(r.p0())
-        self.include(r.p1())
+        if r.p0().x() != 0.0 or r.p0().y() != 0.0: 
+            self.include(r.p0())
+            self.include(r.p1())
+        else:
+            self.include(r.p1())
+            self.include(r.p0())
         
     def xFlip(self):
         """ Flip the rect horizontally """

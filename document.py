@@ -107,6 +107,7 @@ default_styles = {'body': ('times', '', 12),
           'title': ('times', 'B', 16),
           'symbol': ('symbol','', 12),
           'math-var': ('times', 'I', 12),
+          'math-symbol': ('symbol', '', 12),
          }
 
 #---------------------------------------------------------------------------------
@@ -114,16 +115,23 @@ def initPDF(pdf):
     """Set up a FPDF object to work with latex parsers"""
     pdf.add_page()
     pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
+    #pdf.add_font('math-var','','font/lmroman7-italic.otf',uni=True)
     f = default_styles['body']
     pdf.set_font(f[0],f[1],f[2])
 
+#---------------------------------------------------------------------------------
+def setFontPDF(pdf,style, styles = default_styles):
+    """Set font of a pdf object based on the styles in a style list"""
+    f = styles[style]
+    pdf.set_font(f[0],f[1],f[2])
 
 #---------------------------------------------------------------------------------
 class TextItem(DocItem):
     """Prints some form of text"""
-    def __init__(self, text = ''):
+    def __init__(self, text = '', style = 'body'):
         DocItem.__init__(self)
         self.text = text
+        self.style = style
 
     def writePDF(self, pdf = None):
         """Write itself to a FPDF object.
@@ -152,9 +160,8 @@ class TextItem(DocItem):
 #---------------------------------------------------------------------------------
 class Word(TextItem):
     """Prints a word"""
-    def __init__(self, name):
-        TextItem.__init__(self,name)
-        self.style = 'body'
+    def __init__(self, name, style = 'body'):
+        TextItem.__init__(self,name,style)
         
     def getText(self):
         """'Virtual' method returning text of this item."""
@@ -163,19 +170,26 @@ class Word(TextItem):
 #---------------------------------------------------------------------------------
 class Symbol(TextItem):
     """Prints a symbol or word wich can be output as a unicode string"""
-    def __init__(self, name):
-        TextItem.__init__(self, name)
-        self.style = 'symbol'
+    def __init__(self, name, style = 'symbol'):
+        TextItem.__init__(self, name, style)
         
     def getText(self):
         """'Virtual' method returning text of this item."""
         return symbols[self.text]
         
 #---------------------------------------------------------------------------------
-class MathItem(DocItem):
+class MathVariable(Word):
     """Prints some form of text"""
-    def __init__(self):
-        DocItem.__init__(self)
+    def __init__(self, text):
+        Word.__init__(self,text,'math-var')
+
+#---------------------------------------------------------------------------------
+class MathSign(Word):
+    """Prints some form of text"""
+    def __init__(self, text):
+        Word.__init__(self,text,'math-symbol')
+        if text == '-':
+            self.text = u'\u2212'
 
 #---------------------------------------------------------------------------------
 class InlineMathBlock(DocItem):

@@ -132,6 +132,14 @@ class TestRect(unittest.TestCase):
         r1.adjust(Point(-1e-14,-1e-14),Point(1e-14,1e-14))
         self.assertFalse( r.contains( r1 ) )
         self.assertFalse( r1.contains( r ) )
+        self.assertEqual(r.p0(), Point(1,2))
+        self.assertEqual(r.p1(), Point(6,7))
+    
+    def test_unite_1(self):
+        r1 = Rect(0,0,3,4)
+        r = Rect()
+        r.unite(r1)
+        self.assertTrue(r.contains(r1) and r1.contains(r))
     
     def test_flip(self):
         pass
