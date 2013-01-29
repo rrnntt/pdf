@@ -110,6 +110,14 @@ class Rect:
         self._p0 += dp
         self._p1 += dp
         
+    def alignXCenter(self, r):
+        """Align center of this rect with the center of rect r."""
+        rc = ( r.x0() + r.x1() ) / 2
+        xc = ( self.x0() + self.x1() ) / 2
+        dp = Point(rc - xc, 0)
+        self._p0 += dp
+        self._p1 += dp
+        
     def moveTo(self, p):
         """ Translate this Rect such that its p0 moves to p """
         dp = p - self._p0

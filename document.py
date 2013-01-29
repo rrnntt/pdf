@@ -271,7 +271,7 @@ class MathPower(MultiItem):
     """Container for inline maths"""
     def __init__(self):
         MultiItem.__init__(self)
-        self.style = 'math-var'
+        self.style = 'math-var', 1
         
     def resizePDF(self, pdf, x = 0, y = 0):
         if len(self.items) < 2 or not self.items[0] or not self.items[1]:
@@ -279,17 +279,100 @@ class MathPower(MultiItem):
 
         self.rect = Rect(x,y,x,y)
         dx = pdf.get_string_width(' ') * self.style[1]
-        style = '' 
-        for item in self.items:
-            if item:
-                if hasattr(item,'style') and item.style != style:
-                    setFontPDF(pdf, item.style, self.styles)
-                item.resizePDF(pdf,x,y)
+        
+        base = self.items[0] 
+        if hasattr(base,'style'):
+            setFontPDF(pdf, base.style, self.styles)
+        base.resizePDF(pdf,x,y)
 
-        self.rect.unite(self.items[0].rect)
-        self.rect.unite(self.items[1].rect)
+        index = self.items[1] 
+        index.scaleFont(0.8)
+        if hasattr(index,'style'):
+            setFontPDF(pdf, index.style, self.styles)
+        index.resizePDF(pdf, base.rect.x1() + dx, y - base.rect.height() * 0.4)
+
+        self.rect.unite(base.rect)
+        self.rect.unite(index.rect)
         self.refit()
 
+#---------------------------------------------------------------------------------
+class MathBrackets(InlineMathBlock):
+    """Container for inline maths"""
+    def __init__(self):
+        InlineMathBlock.__init__(self)
+        
+    def appendItem(self, item):
+        """Override append a child item. There can only be one item"""
+        self.items = []
+        self.items.append(MathSign('('))
+        self.items.append(item)
+        self.items.append(MathSign(')'))
+        
+#---------------------------------------------------------------------------------
+class MathFrac(MultiItem):
+    """Container for inline maths"""
+    def __init__(self):
+        MultiItem.__init__(self)
+        self.style = 'math-var', 1
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        if len(self.items) < 2 or not self.items[0] or not self.items[1]:
+            raise Exception('MathFrac must have two items.')
+
+        self.rect = Rect(x,y,x,y)
+        dx = pdf.get_string_width(' ') * self.style[1]
+        setFontPDF(pdf, self.style, self.styles)
+        lineHeight = pdf.font_size_pt / pdf.k
+        
+        numerator = self.items[0] 
+        if hasattr(numerator,'style'):
+            setFontPDF(pdf, numerator.style, self.styles)
+        numerator.resizePDF(pdf,x, y - lineHeight * 0.5)
+
+        denominator = self.items[1] 
+        if hasattr(denominator,'style'):
+            setFontPDF(pdf, denominator.style, self.styles)
+        denominator.resizePDF(pdf, x, numerator.rect.y1())
+        
+        if numerator.rect.width() > denominator.rect.width():
+            denominator.rect.alignXCenter(numerator.rect)
+        else:
+            numerator.rect.alignXCenter(denominator.rect)
+
+        self.rect.unite(numerator.rect)
+        self.rect.unite(denominator.rect)
+        self.refit()
+        self.rect.adjust(rect.Point(0,0),rect.Point(2*dx,0))
+
+    def cellPDF(self, pdf):
+        MultiItem.cellPDF(self, pdf)
+        y = self.items[0].rect.y1()
+        pdf.line(self.rect.x0(), y, self.rect.x1(), y)
+        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
+
+#---------------------------------------------------------------------------------
+class MathBigBrackets(InlineMathBlock):
+    """Container for inline maths"""
+    def __init__(self):
+        InlineMathBlock.__init__(self)
+        
+    def appendItem(self, item):
+        """Override append a child item. There can only be one item"""
+        self.items = []
+        self.items.append(MathSign('('))
+        self.items.append(item)
+        self.items.append(MathSign(')'))
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        InlineMathBlock.resizePDF(self, pdf, x, y)
+        bra  = self.items[0]
+        data = self.items[1]
+        ket  = self.items[2] 
+        scale = data.rect.height() / bra.rect.height()
+        bra.scaleFont(scale)
+        ket.scaleFont(scale)
+        InlineMathBlock.resizePDF(self, pdf, x, y)        
+        
 #---------------------------------------------------------------------------------
 class Paragraph(DocItem):
     """Paragraph of a document."""
