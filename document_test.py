@@ -189,15 +189,85 @@ class TestDocument(unittest.TestCase):
 
         plus = MathSign('+')
         plus.resizePDF(pdf, 4, 2)
-        w = MathSign('-')
-        w.resizePDF(pdf, 1, 2)
-        self.assertGreater(w.rect.x1(), w.rect.x0())
-        self.assertGreater(w.rect.y1(), w.rect.y0())
+        minus = MathSign('-')
+        minus.resizePDF(pdf, 1, 2)
+        self.assertGreater(minus.rect.x1(), minus.rect.x0())
+        self.assertGreater(minus.rect.y1(), minus.rect.y0())
+        self.assertGreater(plus.rect.x1(), plus.rect.x0())
+        self.assertGreater(plus.rect.y1(), plus.rect.y0())
         #self.assertEqual(w.text, 'var')
-        self.assertEqual(w.style, 'math-symbol')
-        w.cellPDF(pdf)
+        self.assertEqual(minus.style, 'math-symbol')
+        minus.cellPDF(pdf)
         plus.cellPDF(pdf)
-        print w.rect,plus.rect
         pdf.output('out/test_MathSign.pdf', 'F')
         
+    def test_InlineMathBlock(self):
+        self.do_for_each_DocItem_class(InlineMathBlock())
+
+        pdf = FPDF()
+        initPDF(pdf)
         
+        block = InlineMathBlock()
+        block.appendItem(MathVariable('x'))
+        block.appendItem(MathSign('+'))
+        block.appendItem(MathVariable('y'))
+        block.appendItem(MathSign('-'))
+        block.appendItem(MathVariable('z'))
+        
+        block.resizePDF(pdf, 10, 20)
+        block.cellPDF(pdf)
+        pdf.output('out/test_InlineMathBlock.pdf', 'F')
+        
+    def test_MathFun(self):
+        self.do_for_each_DocItem_class(InlineMathBlock())
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        block = InlineMathBlock()
+        block.appendItem(MathFunction('tan'))
+        block.appendItem(MathVariable('x'))
+        block.appendItem(MathSign('='))
+        block.appendItem(MathFunction('sin'))
+        block.appendItem(MathVariable('x'))
+        block.appendItem(MathSign('/'))
+        block.appendItem(MathFunction('cos'))
+        block.appendItem(MathVariable('x'))
+        
+        block.resizePDF(pdf, 10, 20)
+        block.cellPDF(pdf)
+        
+        block.moveTo(10, 30)
+        block.cellPDF(pdf)
+        
+        pdf.output('out/test_MathFunction.pdf', 'F')
+                
+    def test_ScaleFont(self):
+        self.do_for_each_DocItem_class(InlineMathBlock())
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        block = InlineMathBlock()
+        block.appendItem(MathFunction('tan'))
+        block.appendItem(MathVariable('x'))
+        block.appendItem(MathSign('='))
+        block.appendItem(MathFunction('sin'))
+        block.appendItem(MathVariable('x'))
+        block.appendItem(MathSign('/'))
+        block.appendItem(MathFunction('cos'))
+        block.appendItem(MathVariable('x'))
+        
+        block.resizePDF(pdf, 10, 20)
+        block.cellPDF(pdf)
+        
+        block.scaleFont(0.8)
+        block.resizePDF(pdf, 10, 30)
+        block.cellPDF(pdf)
+        
+        block.scaleFont(2.0)
+        block.resizePDF(pdf, 10, 40)
+        block.cellPDF(pdf)
+        
+        pdf.output('out/test_ScaleFactor.pdf', 'F')
+                                

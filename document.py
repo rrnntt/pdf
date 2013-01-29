@@ -4,16 +4,65 @@ from rect import Rect
 ######################################################################################
 #     Document items
 ######################################################################################
+default_styles = {'body': ('times', '', 12),
+          'title': ('times', 'B', 16),
+          'symbol': ('symbol','', 12),
+          'math-var': ('times', 'I', 12),
+          'math-symbol': ('symbol', '', 12),
+          'math-fun': ('times', '', 12),
+         }
+
+textAlignments = {'j': rect.justifyX,
+                  'l': rect.alignLeft,
+                  'r': rect.alignRight,
+                  'c': rect.center,
+                 }
+
+#---------------------------------------------------------------------------------
+def initPDF(pdf):
+    """Set up a FPDF object to work with latex parsers"""
+    pdf.add_page()
+    pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
+    #pdf.add_font('math-var','','font/lmroman7-italic.otf',uni=True)
+    f = default_styles['body']
+    pdf.set_font(f[0],f[1],f[2])
+
+#---------------------------------------------------------------------------------
+def setFontPDF(pdf,style, styles = default_styles):
+    """Set font of a pdf object based on the styles in a style list"""
+    if isinstance(style,tuple):
+        style_name = style[0]
+        factor = style[1]
+    else:
+        style_name = style
+        factor = 1
+    f = styles[style_name]
+    font_size = f[2] * factor
+    pdf.set_font(f[0],f[1],font_size)
+
+#---------------------------------------------------------------------------------
 class DocItem:
     """An item of a document."""
     def __init__(self):
         self.text = ''
     
+    def scaleFont(self,factor):
+        """Scale font size by a factor"""
+        if hasattr(self,'style'):
+            if isinstance(self.style,tuple):
+                self.style = self.style[0],self.style[1]*factor
+            else:
+                self.style = (self.style,factor)
+
 #---------------------------------------------------------------------------------
-class MultiItem:
+class MultiItem(DocItem):
     """A complex item containing other items."""
     def __init__(self):
+        DocItem.__init__(self)
         self.items = []
+        # pointer to the local styles dict
+        self.styles = default_styles
+        self.style = ('body',1)
         
     def appendItem(self, item):
         """Append a child document item."""
@@ -35,6 +84,11 @@ class MultiItem:
                 item.rect.translate(dp)
                 item.refit()
                 
+    def moveTo(self,x,y):
+        """Moves this multi-item to point with coordinates x,y."""
+        self.rect.moveTo(rect.Point(x,y))
+        self.refit()
+                
     def getUnionRect(self):
         """Create a union of all children's rects."""
         rect = Rect()
@@ -42,7 +96,23 @@ class MultiItem:
             if item:
                 rect.unite(item.rect)
         return rect
-        
+    
+    def cellPDF(self, pdf):
+        """Output the item to PDF"""
+        style = ''
+        for item in self.items:
+            if item:
+                if hasattr(item,'style') and item.style != style:
+                    setFontPDF(pdf, item.style, self.styles)
+                item.cellPDF(pdf)
+                
+    def scaleFont(self,factor):
+        """Scale font size by a factor"""
+        self.style = self.style[0],self.style[1]*factor
+        for item in self.items:
+            if item:
+                item.scaleFont(factor)
+
 #---------------------------------------------------------------------------------
 symbols = {'alpha': u'\u03b1',
            'beta': u'\u03b2',
@@ -96,34 +166,6 @@ symbols = {'alpha': u'\u03b1',
            'Psi': u'\u03a8',
            'Omega': u'\u03a9',          
            }
-
-textAlignments = {'j': rect.justifyX,
-                  'l': rect.alignLeft,
-                  'r': rect.alignRight,
-                  'c': rect.center,
-                 }
-
-default_styles = {'body': ('times', '', 12),
-          'title': ('times', 'B', 16),
-          'symbol': ('symbol','', 12),
-          'math-var': ('times', 'I', 12),
-          'math-symbol': ('symbol', '', 12),
-         }
-
-#---------------------------------------------------------------------------------
-def initPDF(pdf):
-    """Set up a FPDF object to work with latex parsers"""
-    pdf.add_page()
-    pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
-    #pdf.add_font('math-var','','font/lmroman7-italic.otf',uni=True)
-    f = default_styles['body']
-    pdf.set_font(f[0],f[1],f[2])
-
-#---------------------------------------------------------------------------------
-def setFontPDF(pdf,style, styles = default_styles):
-    """Set font of a pdf object based on the styles in a style list"""
-    f = styles[style]
-    pdf.set_font(f[0],f[1],f[2])
 
 #---------------------------------------------------------------------------------
 class TextItem(DocItem):
@@ -192,39 +234,61 @@ class MathSign(Word):
             self.text = u'\u2212'
 
 #---------------------------------------------------------------------------------
-class InlineMathBlock(DocItem):
+class MathFunction(Word):
+    """Prints name of math function such as sin or log"""
+    def __init__(self, text):
+        Word.__init__(self,text,'math-fun')
+
+#---------------------------------------------------------------------------------
+class InlineMathBlock(MultiItem):
     """Container for inline maths"""
     def __init__(self):
-        DocItem.__init__(self)
-        self.style = 'math-var'
-        # pointer to the local styles dict
-        self.styles = default_styles
+        MultiItem.__init__(self)
+        self.style = ('math-var',1)
         
     def resizePDF(self, pdf, x = 0, y = 0):
         self.rect = Rect(x,y,x,y)
         dx = pdf.get_string_width(' ')
+        dx *= self.style[1]
         rectList = []
         width = 0.0
+        style = ''
         for item in self.items:
             if item:
+                if hasattr(item,'style') and item.style != style:
+                    setFontPDF(pdf, item.style, self.styles)
                 item.resizePDF(pdf,x,y)
                 rectList.append(item.rect)
-                width += item.rect.width()
+                width += item.rect.width() + dx
                 
         rect.alignLeft(rectList, x, x+width, dx)
         for r in rectList:
             self.rect.unite(r)
+        self.refit()
 
-    def cellPDF(self, pdf):
-        """Output the paragraph to PDF"""
-        style = ''
+#---------------------------------------------------------------------------------
+class MathPower(MultiItem):
+    """Container for inline maths"""
+    def __init__(self):
+        MultiItem.__init__(self)
+        self.style = 'math-var'
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        if len(self.items) < 2 or not self.items[0] or not self.items[1]:
+            raise Exception('MathPower must have two items.')
+
+        self.rect = Rect(x,y,x,y)
+        dx = pdf.get_string_width(' ') * self.style[1]
+        style = '' 
         for item in self.items:
             if item:
-                if item.style != style:
-                    style = item.style
-                    f = self.styles[style]
-                    pdf.set_font(f[0],f[1],f[2])
-                item.cellPDF(pdf)
+                if hasattr(item,'style') and item.style != style:
+                    setFontPDF(pdf, item.style, self.styles)
+                item.resizePDF(pdf,x,y)
+
+        self.rect.unite(self.items[0].rect)
+        self.rect.unite(self.items[1].rect)
+        self.refit()
 
 #---------------------------------------------------------------------------------
 class Paragraph(DocItem):

@@ -110,6 +110,12 @@ class Rect:
         self._p0 += dp
         self._p1 += dp
         
+    def moveTo(self, p):
+        """ Translate this Rect such that its p0 moves to p """
+        dp = p - self._p0
+        self._p0 += dp
+        self._p1 += dp
+        
     def vertex(self, i):
         """ 
         Get i-th vertex (Point) of this Rect. If p0 is in the bottom-left corner then 
