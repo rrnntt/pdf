@@ -401,4 +401,150 @@ class TestDocument(unittest.TestCase):
         brackets.resizePDF(pdf, 10, 10)
         brackets.cellPDF(pdf)
         
+        brackets = MathBigBrackets('{','}')
+        brackets.appendItem(p)
+
+        brackets.resizePDF(pdf, 10, 30)
+        brackets.cellPDF(pdf)
+        
+        brackets = MathBigBrackets('{','')
+        brackets.appendItem(p)
+
+        brackets.resizePDF(pdf, 10, 50)
+        brackets.cellPDF(pdf)
+        
+        brackets = MathBigBrackets('',']')
+        brackets.appendItem(p)
+
+        brackets.resizePDF(pdf, 10, 70)
+        brackets.cellPDF(pdf)
+        
         pdf.output('out/test_MathBigBrackets.pdf', 'F')
+
+    def test_MathBelowAndAbove(self):
+        tmp = MathBelowAndAbove()
+        tmp.appendItem(MathVariable('x'))
+        self.do_for_each_DocItem_class(tmp)
+        
+        pdf = FPDF()
+        initPDF(pdf)
+        
+#        block = InlineMathBlock()
+#        block.appendItem(MathVariable('n'))
+#        block.appendItem(MathSign('='))
+#        block.appendItem(MathVariable('0'))
+        
+        sigma = Symbol('Sigma')
+        sigma.scaleFont(2.0)
+
+        s = MathBelowAndAbove()
+        s.appendItem(sigma)
+        s.appendItem(InlineMathBlock(MathVariable('n'),MathSign('='),MathVariable('0')))
+        s.appendItem(MathVariable('N'))
+        
+        s.resizePDF(pdf, 10, 10)
+        s.cellPDF(pdf)
+        
+        pi = Symbol('Pi')
+        pi.scaleFont(2.0)
+
+        prod = MathBelowAndAbove(pi,
+                                 InlineMathBlock(MathVariable('i'),MathSign('='),MathVariable('1')),
+                                 MathVariable('M')
+                                 )
+        
+        prod.resizePDF(pdf, 10, 40)
+        prod.cellPDF(pdf)
+        
+        lim = MathBelowAndAbove(MathFunction('lim'),
+                                InlineMathBlock(MathVariable('x'),MathSign('->'),MathVariable('4'))
+                                )
+        
+        lim.resizePDF(pdf, 10, 60)
+        lim.cellPDF(pdf)
+        
+        tilde = MathBelowAndAbove(Symbol('beta'),
+                                  None,
+                                  MathSign('~')
+                                  )
+        
+        tilde.resizePDF(pdf, 10, 80)
+        tilde.cellPDF(pdf)
+        
+        pdf.output('out/test_MathBelowAndAbove.pdf', 'F')
+        
+    def test_MathColumn(self):
+        self.do_for_each_DocItem_class(MathColumn())
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        block = MathColumn(InlineMathBlock(MathVariable('x'),MathSign('='),MathVariable('0')),
+                           InlineMathBlock(MathVariable('y'),MathSign('='),MathVariable('0')),
+                           InlineMathBlock(MathVariable('z'),MathSign('='),MathVariable('0'))
+                           )
+        
+        block.resizePDF(pdf, 10, 20)
+        block.cellPDF(pdf)
+        pdf.output('out/test_MathColumn.pdf', 'F')
+        
+    def test_MathSum(self):
+        self.do_for_each_DocItem_class(MathSum())
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        summ = MathSum(InlineMathBlock(MathVariable('i'),MathSign('='),MathVariable('1')),
+                     MathVariable('M')
+                     )
+        
+        summ.resizePDF(pdf, 10, 10)
+        summ.cellPDF(pdf)
+        
+        pdf.output('out/test_MathSum.pdf', 'F')
+
+    def test_MathProd(self):
+        self.do_for_each_DocItem_class(MathProd())
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        prod = MathProd(InlineMathBlock(MathVariable('i'),MathSign('='),MathVariable('1')),
+                     MathVariable('M')
+                     )
+        
+        prod.resizePDF(pdf, 10, 10)
+        prod.cellPDF(pdf)
+        
+        pdf.output('out/test_MathProd.pdf', 'F')
+
+    def test_MathSubSuperscript(self):
+        self.do_for_each_DocItem_class(MathSubSuperscript(MathVariable('x'),MathVariable('2')))
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        #----------------------------
+        sss = MathSubSuperscript(MathVariable('x'),MathVariable('n'),MathVariable('2'))
+        sss.resizePDF(pdf, 10, 10)
+        sss.cellPDF(pdf)
+        
+        #----------------------------
+        sss = MathSubSuperscript(MathVariable('x'),MathVariable('i'))
+        sss.resizePDF(pdf, 10, 20)
+        sss.cellPDF(pdf)
+        
+        #----------------------------
+        block = InlineMathBlock()
+        block.appendItem(MathVariable('x'))
+        block.appendItem(MathSign('+'))
+        block.appendItem(MathVariable('y'))
+
+        brackets = MathBrackets()
+        brackets.appendItem(block)
+
+        sss = MathSubSuperscript(brackets,None,MathVariable('p'))
+        sss.resizePDF(pdf, 10, 40)
+        sss.cellPDF(pdf)
+        
+        pdf.output('out/test_MathSubSuperscript.pdf', 'F')

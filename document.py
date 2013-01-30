@@ -50,9 +50,12 @@ class DocItem:
         """Scale font size by a factor"""
         if hasattr(self,'style'):
             if isinstance(self.style,tuple):
-                self.style = self.style[0],self.style[1]*factor
+                self.style = self.style[0],factor
             else:
                 self.style = (self.style,factor)
+                
+    def showRect(self,pdf):
+        pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
 
 #---------------------------------------------------------------------------------
 class MultiItem(DocItem):
@@ -108,11 +111,21 @@ class MultiItem(DocItem):
                 
     def scaleFont(self,factor):
         """Scale font size by a factor"""
-        self.style = self.style[0],self.style[1]*factor
+        self.style = self.style[0],factor
         for item in self.items:
             if item:
                 item.scaleFont(factor)
+                
+    def setFontPDF(self,pdf,item):
+        setFontPDF(pdf,item.style, self.styles)
 
+    def resizeItemsPDF(self,pdf, x, y):
+        """Resize all items with origin at x,y"""
+        for item in self.items:
+            if item:
+                self.setFontPDF(pdf, item)
+                item.resizePDF(pdf, x, y)
+                
 #---------------------------------------------------------------------------------
 symbols = {'alpha': u'\u03b1',
            'beta': u'\u03b2',
@@ -242,9 +255,11 @@ class MathFunction(Word):
 #---------------------------------------------------------------------------------
 class InlineMathBlock(MultiItem):
     """Container for inline maths"""
-    def __init__(self):
+    def __init__(self, *items):
         MultiItem.__init__(self)
         self.style = ('math-var',1)
+        for item in items:
+            self.appendItem(item)
         
     def resizePDF(self, pdf, x = 0, y = 0):
         self.rect = Rect(x,y,x,y)
@@ -353,26 +368,165 @@ class MathFrac(MultiItem):
 #---------------------------------------------------------------------------------
 class MathBigBrackets(InlineMathBlock):
     """Container for inline maths"""
-    def __init__(self):
+    def __init__(self, bra = '(', ket = ')'):
         InlineMathBlock.__init__(self)
+        if bra != '':
+            self.bra = MathSign(bra)
+        else:
+            self.bra = None
+        if ket != '':
+            self.ket = MathSign(ket)
+        else:
+            self.ket = None
+        self.data = None
         
     def appendItem(self, item):
         """Override append a child item. There can only be one item"""
         self.items = []
-        self.items.append(MathSign('('))
+        if self.bra:
+            self.items.append(self.bra)
         self.items.append(item)
-        self.items.append(MathSign(')'))
+        self.data = item
+        if self.ket:
+            self.items.append(self.ket)
         
     def resizePDF(self, pdf, x = 0, y = 0):
         InlineMathBlock.resizePDF(self, pdf, x, y)
-        bra  = self.items[0]
-        data = self.items[1]
-        ket  = self.items[2] 
-        scale = data.rect.height() / bra.rect.height()
-        bra.scaleFont(scale)
-        ket.scaleFont(scale)
-        InlineMathBlock.resizePDF(self, pdf, x, y)        
+        scale = None
+        if self.bra:
+            scale = self.data.rect.height() / self.bra.rect.height()
+            self.bra.scaleFont(scale)
+        if self.ket:
+            if not scale:
+                scale = self.data.rect.height() / self.ket.rect.height()
+            self.ket.scaleFont(scale)
+        InlineMathBlock.resizePDF(self, pdf, x, y)
+        #self.showRect(pdf)
         
+#---------------------------------------------------------------------------------
+class MathBelowAndAbove(MultiItem):
+    """Can have up to 3 items: first is placed inline with the text,
+    if there is a second item it's placed below the first,
+    if there is a third item it's placed above the first.
+    """
+    def __init__(self,base = None, below = None, above = None):
+        MultiItem.__init__(self)
+        self.style = 'math-var', 1
+        if base:
+            self.appendItem(base)
+            if below:
+                self.appendItem(below)
+                if above:
+                    self.appendItem(above)
+            else:
+                if above:
+                    self.appendItem(None)
+                    self.appendItem(above)
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        if len(self.items) == 0:
+            raise Exception('MathAboveAndBelow must have at least one item.')
+        self.rect = Rect(x,y,x,y)
+        base = self.items[0]
+        self.setFontPDF(pdf, base)
+        base.resizePDF(pdf,x,y)
+        self.rect.unite(base.rect)
+
+        if len(self.items) > 1 and self.items[1]:
+            below = self.items[1]
+            self.setFontPDF(pdf, below)
+            below.resizePDF(pdf,x,y)
+            below.rect.translate(0, base.rect.height())
+            below.rect.alignXCenter( base.rect )
+            self.rect.unite(below.rect)
+            
+        if len(self.items) > 2 and self.items[2]:
+            above = self.items[2]
+            self.setFontPDF(pdf, above)
+            above.resizePDF(pdf,x,y)
+            above.rect.translate(0, - above.rect.height())
+            above.rect.alignXCenter( base.rect )
+            self.rect.unite(above.rect)
+            
+        self.refit()
+        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
+
+#---------------------------------------------------------------------------------
+class MathColumn(MultiItem):
+    """Container for inline maths"""
+    def __init__(self, *items):
+        MultiItem.__init__(self)
+        self.style = ('math-var',1)
+        for item in items:
+            self.appendItem(item)
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        self.rect = Rect(x,y,x,y)
+        for item in self.items:
+            self.setFontPDF(pdf, item)
+            item.resizePDF(pdf,x,y)
+            item.rect.translate(0,self.rect.height())
+            self.rect.unite(item.rect)
+                
+        self.refit()
+
+#---------------------------------------------------------------------------------
+class MathSum(MathBelowAndAbove):
+    """"""
+    def __init__(self, below = None, above = None):
+        if below:
+            below.scaleFont(0.8)
+        if above:
+            above.scaleFont(0.8)
+        sigma = Symbol('Sigma')
+        sigma.scaleFont(2.0)
+        MathBelowAndAbove.__init__(self, sigma, below, above)
+
+#---------------------------------------------------------------------------------
+class MathProd(MathBelowAndAbove):
+    """"""
+    def __init__(self, below = None, above = None):
+        if below:
+            below.scaleFont(0.8)
+        if above:
+            above.scaleFont(0.8)
+        sigma = Symbol('Pi')
+        sigma.scaleFont(2.0)
+        MathBelowAndAbove.__init__(self, sigma, below, above)
+
+#---------------------------------------------------------------------------------
+class MathSubSuperscript(MultiItem):
+    """An item with a subscript"""
+    def __init__(self, base, subscript = None, superscript = None):
+        MultiItem.__init__(self)
+        self.appendItem(base)
+        self.base = base  
+        self.subscript = subscript
+        self.superscript = superscript
+        if subscript:
+            subscript.scaleFont(0.8)
+            self.appendItem(subscript)
+        if superscript:
+            superscript.scaleFont(0.8)
+            self.appendItem(superscript)
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        self.resizeItemsPDF(pdf, x, y)
+        dx = pdf.get_string_width(' ') * self.style[1]
+        self.rect = Rect(x,y,x,y)
+         
+        h = self.base.rect.height()
+        w = self.base.rect.width() + dx
+        
+        if self.subscript:
+            self.subscript.rect.translate(w, h*0.5)
+            self.rect.unite(self.subscript.rect)
+        if self.superscript:
+            self.superscript.rect.translate(w, - h*0.5)
+            self.rect.unite(self.superscript.rect)
+        
+        self.refit()
+    
 #---------------------------------------------------------------------------------
 class Paragraph(DocItem):
     """Paragraph of a document."""
