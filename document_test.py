@@ -2,6 +2,24 @@ import unittest
 from fpdf import FPDF
 from document import *
 
+def BRACKETS( *item ):
+    block = InlineMathBlock(*item)
+    bb = MathBigBrackets()
+    bb.appendItem(block)
+    return bb
+
+b = InlineMathBlock
+v = MathVariable
+si = MathSign
+sy = Symbol
+br = BRACKETS
+ss = MathSubSuperscript
+sm = MathSum
+f = MathFrac
+fun = MathFunction
+n = MathNumber
+w = Word
+
 class TestDocument(unittest.TestCase):
     
     def dummy_refit(self):
@@ -421,6 +439,17 @@ class TestDocument(unittest.TestCase):
         
         pdf.output('out/test_MathBigBrackets.pdf', 'F')
 
+    def test_MathBigBrackets1(self):
+
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        brackets = MathBigBrackets('(',')', b( f(n('1'),n('2'))) )
+        brackets.resizePDF(pdf, 10, 20)
+        brackets.cellPDF(pdf)
+        
+        pdf.output('out/test_MathBigBrackets1.pdf', 'F')
+
     def test_MathBelowAndAbove(self):
         tmp = MathBelowAndAbove()
         tmp.appendItem(MathVariable('x'))
@@ -498,7 +527,7 @@ class TestDocument(unittest.TestCase):
                      MathVariable('M')
                      )
         
-        summ.resizePDF(pdf, 10, 10)
+        summ.resizePDF(pdf, 10, 20)
         summ.cellPDF(pdf)
         
         pdf.output('out/test_MathSum.pdf', 'F')
@@ -548,3 +577,39 @@ class TestDocument(unittest.TestCase):
         sss.cellPDF(pdf)
         
         pdf.output('out/test_MathSubSuperscript.pdf', 'F')
+
+    def test_formulas(self):
+        
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        formula = b( v('x'), si('-'), v('y'), si('+'), n('1'), si('='), n('0') )
+        formula.resizePDF(pdf,10,10)
+        formula.cellPDF(pdf)
+        
+        formula = b( 
+                ss( br( v('x'), si('-'), v('y') ), None, n('2') ),
+                si('+'), v('x'),
+                si('-'), f( v('x'), b(v('x'), si('-'), v('y')) ), 
+                si('+'), b( sm(b(v('i'),si('='),n('1')),v('N')), n('2'),ss(v('z'),v('i')))
+              )
+        formula.resizePDF(pdf,10,30)
+        formula.cellPDF(pdf)
+        
+        pdf.output('out/test_Formulas.pdf', 'F')
+        
+    def test_Paragraph(self):
+        self.do_for_each_DocItem_class(Paragraph())
+        
+        pdf = FPDF()
+        initPDF(pdf)
+        
+        par = Paragraph()
+        par.addItems(*[w('Hello'),w('world!')])
+        par.addItems(w('Formula:'),b(v('x'),si('+'),f(n('1'),n('2'))))
+        
+        par.resizePDF(pdf)
+        par.cellPDF(pdf)
+        
+        pdf.output('out/test_Paragraph.pdf', 'F')
+        

@@ -18,9 +18,14 @@ textAlignments = {'j': rect.justifyX,
                   'c': rect.center,
                  }
 
+""""Empirically found fraction of font's height from the top which defines
+character's baseline"""
+pdf_baseline = 0.81
+
 #---------------------------------------------------------------------------------
 def initPDF(pdf):
     """Set up a FPDF object to work with latex parsers"""
+    pdf.c_margin = 0.0 # inner cell margin
     pdf.add_page()
     pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
     #pdf.add_font('math-var','','font/lmroman7-italic.otf',uni=True)
@@ -66,6 +71,8 @@ class MultiItem(DocItem):
         # pointer to the local styles dict
         self.styles = default_styles
         self.style = ('body',1)
+        # left and top inner margins
+        self.margins = rect.Point(0,0)
         
     def appendItem(self, item):
         """Append a child document item."""
@@ -81,7 +88,7 @@ class MultiItem(DocItem):
         This method moves children's rects and refits them. 
         """
         old_rect = self.getUnionRect()
-        dp = self.rect.p0() - old_rect.p0()
+        dp = self.rect.p0() - old_rect.p0() + self.margins
         for item in self.items:
             if item:
                 item.rect.translate(dp)
@@ -125,6 +132,13 @@ class MultiItem(DocItem):
             if item:
                 self.setFontPDF(pdf, item)
                 item.resizePDF(pdf, x, y)
+                
+    def getLineHeight(self, pdf):
+        return pdf.font_size_pt / pdf.k
+    
+    def addItems(self, *items):
+        for item in items:
+            self.appendItem(item)
                 
 #---------------------------------------------------------------------------------
 symbols = {'alpha': u'\u03b1',
@@ -239,6 +253,12 @@ class MathVariable(Word):
         Word.__init__(self,text,'math-var')
 
 #---------------------------------------------------------------------------------
+class MathNumber(Word):
+    """Prints some form of text"""
+    def __init__(self, text):
+        Word.__init__(self,text)
+
+#---------------------------------------------------------------------------------
 class MathSign(Word):
     """Prints some form of text"""
     def __init__(self, text):
@@ -326,9 +346,14 @@ class MathBrackets(InlineMathBlock):
 #---------------------------------------------------------------------------------
 class MathFrac(MultiItem):
     """Container for inline maths"""
-    def __init__(self):
+    def __init__(self, num = None, denom = None):
         MultiItem.__init__(self)
         self.style = 'math-var', 1
+        if num:
+            if not denom:
+                denom = MathNumber('1')
+            self.appendItem(num)
+            self.appendItem(denom)
         
     def resizePDF(self, pdf, x = 0, y = 0):
         if len(self.items) < 2 or not self.items[0] or not self.items[1]:
@@ -336,18 +361,19 @@ class MathFrac(MultiItem):
 
         self.rect = Rect(x,y,x,y)
         dx = pdf.get_string_width(' ') * self.style[1]
+        self.margins.set(dx, 0.0)
         setFontPDF(pdf, self.style, self.styles)
         lineHeight = pdf.font_size_pt / pdf.k
         
         numerator = self.items[0] 
         if hasattr(numerator,'style'):
             setFontPDF(pdf, numerator.style, self.styles)
-        numerator.resizePDF(pdf,x, y - lineHeight * 0.5)
+        numerator.resizePDF(pdf,x + dx, y - lineHeight * 0.5)
 
         denominator = self.items[1] 
         if hasattr(denominator,'style'):
             setFontPDF(pdf, denominator.style, self.styles)
-        denominator.resizePDF(pdf, x, numerator.rect.y1())
+        denominator.resizePDF(pdf, x + dx, numerator.rect.y1())
         
         if numerator.rect.width() > denominator.rect.width():
             denominator.rect.alignXCenter(numerator.rect)
@@ -356,19 +382,18 @@ class MathFrac(MultiItem):
 
         self.rect.unite(numerator.rect)
         self.rect.unite(denominator.rect)
-        self.refit()
-        self.rect.adjust(rect.Point(0,0),rect.Point(2*dx,0))
+        self.rect.adjust(rect.Point(0,0),rect.Point(dx,0))
 
     def cellPDF(self, pdf):
         MultiItem.cellPDF(self, pdf)
         y = self.items[0].rect.y1()
         pdf.line(self.rect.x0(), y, self.rect.x1(), y)
-        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
+        #self.showRect(pdf)
 
 #---------------------------------------------------------------------------------
 class MathBigBrackets(InlineMathBlock):
     """Container for inline maths"""
-    def __init__(self, bra = '(', ket = ')'):
+    def __init__(self, bra = '(', ket = ')', items = None):
         InlineMathBlock.__init__(self)
         if bra != '':
             self.bra = MathSign(bra)
@@ -378,7 +403,12 @@ class MathBigBrackets(InlineMathBlock):
             self.ket = MathSign(ket)
         else:
             self.ket = None
-        self.data = None
+        
+        if items:
+            self.data = items
+            self.appendItem(items)
+        else:
+            self.data = None
         
     def appendItem(self, item):
         """Override append a child item. There can only be one item"""
@@ -393,14 +423,19 @@ class MathBigBrackets(InlineMathBlock):
     def resizePDF(self, pdf, x = 0, y = 0):
         InlineMathBlock.resizePDF(self, pdf, x, y)
         scale = None
+        h = self.data.rect.height()
         if self.bra:
-            scale = self.data.rect.height() / self.bra.rect.height()
+            scale = h / self.bra.rect.height()
             self.bra.scaleFont(scale)
         if self.ket:
             if not scale:
-                scale = self.data.rect.height() / self.ket.rect.height()
+                scale = h / self.ket.rect.height()
             self.ket.scaleFont(scale)
         InlineMathBlock.resizePDF(self, pdf, x, y)
+        if scale > 1.0:
+            dy = h * ( 1.0 - pdf_baseline )
+            self.data.rect.translate(0,dy)
+            self.data.refit()
         #self.showRect(pdf)
         
 #---------------------------------------------------------------------------------
@@ -471,28 +506,41 @@ class MathColumn(MultiItem):
         self.refit()
 
 #---------------------------------------------------------------------------------
-class MathSum(MathBelowAndAbove):
+class MathSumLike(MathBelowAndAbove):
     """"""
-    def __init__(self, below = None, above = None):
+    def __init__(self, symbol, below = None, above = None):
         if below:
             below.scaleFont(0.8)
         if above:
             above.scaleFont(0.8)
-        sigma = Symbol('Sigma')
+        sigma = Symbol(symbol)
         sigma.scaleFont(2.0)
         MathBelowAndAbove.__init__(self, sigma, below, above)
+        
+    def resizePDF(self, pdf, x = 0, y = 0):
+        self.setFontPDF(pdf, self)
+        lineHeight = self.getLineHeight(pdf)
+        MathBelowAndAbove.resizePDF(self, pdf, x, y)
+        dy = self.items[0].rect.height() * pdf_baseline - lineHeight
+        self.rect.translate(0, - dy)
+        self.refit()
+        
+#    def cellPDF(self, pdf):
+#        MathBelowAndAbove.cellPDF(self, pdf)
+#        self.items[0].showRect(pdf)
+#        self.showRect(pdf)
 
 #---------------------------------------------------------------------------------
-class MathProd(MathBelowAndAbove):
+class MathSum(MathSumLike):
     """"""
     def __init__(self, below = None, above = None):
-        if below:
-            below.scaleFont(0.8)
-        if above:
-            above.scaleFont(0.8)
-        sigma = Symbol('Pi')
-        sigma.scaleFont(2.0)
-        MathBelowAndAbove.__init__(self, sigma, below, above)
+        MathSumLike.__init__(self, 'Sigma', below, above)
+        
+#---------------------------------------------------------------------------------
+class MathProd(MathSumLike):
+    """"""
+    def __init__(self, below = None, above = None):
+        MathSumLike.__init__(self, 'Pi', below, above)
 
 #---------------------------------------------------------------------------------
 class MathSubSuperscript(MultiItem):
@@ -528,10 +576,11 @@ class MathSubSuperscript(MultiItem):
         self.refit()
     
 #---------------------------------------------------------------------------------
-class Paragraph(DocItem):
+class Paragraph(MultiItem):
     """Paragraph of a document."""
     def __init__(self, width = -1):
-        DocItem.__init__(self)
+        MultiItem.__init__(self)
+        self.style = ('body',1)
         self.width = width
         # possible alignments: j (justify), l (left), r (right), c (center)
         self.textAlignment = 'j'
@@ -564,9 +613,9 @@ class Paragraph(DocItem):
             x, y (float): coordinates of the top-left corner of the paragraph relative to the page's
                 margins.
         """
-        style = 'body'
-        f = self.styles[style]
-        pdf.set_font(f[0],f[1],f[2])
+        style = self.style
+        setFontPDF(pdf, style, self.styles)
+
         if self.width <= 0:
             self.width = pdf.fw - pdf.l_margin - pdf.r_margin - x
         self.space = pdf.get_string_width(' ')
@@ -589,8 +638,7 @@ class Paragraph(DocItem):
             if item:
                 if item.style != style:
                     style = item.style
-                    f = self.styles[style]
-                    pdf.set_font(f[0],f[1],f[2])
+                    self.setFontPDF(pdf, item)
                 item.resizePDF(pdf, 0, y)
                 rectList.append( item.rect )
             
@@ -612,19 +660,20 @@ class Paragraph(DocItem):
             del rectList[:n]
         # add the bottom margin
         self.rect.adjust(rect.Point(0,0), rect.Point(0,self.b_margin))
+        self.refit()
             
-    def cellPDF(self, pdf):
-        """Output the paragraph to PDF"""
-        style = ''
-        for item in self.items:
-            if item:
-                if item.style != style:
-                    style = item.style
-                    f = self.styles[style]
-                    pdf.set_font(f[0],f[1],f[2])
-                item.cellPDF(pdf)
-                
-        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
+#    def cellPDF(self, pdf):
+#        """Output the paragraph to PDF"""
+#        style = ''
+#        for item in self.items:
+#            if item:
+#                if item.style != style:
+#                    style = item.style
+#                    f = self.styles[style]
+#                    pdf.set_font(f[0],f[1],f[2])
+#                item.cellPDF(pdf)
+#                
+#        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
                 
                 
 #---------------------------------------------------------------------------------
