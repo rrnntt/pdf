@@ -387,6 +387,7 @@ class MathFrac(MultiItem):
     def cellPDF(self, pdf):
         MultiItem.cellPDF(self, pdf)
         y = self.items[0].rect.y1()
+        pdf.set_line_width(0.2)
         pdf.line(self.rect.x0(), y, self.rect.x1(), y)
         #self.showRect(pdf)
 
@@ -576,8 +577,8 @@ class MathSubSuperscript(MultiItem):
         self.refit()
     
 #---------------------------------------------------------------------------------
-class Paragraph(MultiItem):
-    """Paragraph of a document."""
+class ParagraphBox(MultiItem):
+    """ParagraphBox of a document."""
     def __init__(self, width = -1):
         MultiItem.__init__(self)
         self.style = ('body',1)
@@ -662,25 +663,11 @@ class Paragraph(MultiItem):
         self.rect.adjust(rect.Point(0,0), rect.Point(0,self.b_margin))
         self.refit()
             
-#    def cellPDF(self, pdf):
-#        """Output the paragraph to PDF"""
-#        style = ''
-#        for item in self.items:
-#            if item:
-#                if item.style != style:
-#                    style = item.style
-#                    f = self.styles[style]
-#                    pdf.set_font(f[0],f[1],f[2])
-#                item.cellPDF(pdf)
-#                
-#        #pdf.rect(self.rect.x0(), self.rect.y0(), self.rect.width(), self.rect.height(), 'B')
-                
-                
 #---------------------------------------------------------------------------------
-class Title(Paragraph):
+class Title(ParagraphBox):
     """Print a document title."""
     def __init__(self, width = -1):
-        Paragraph.__init__(self, width)
+        ParagraphBox.__init__(self, width)
         self.textAlignment = 'c'
         
     def resizePDF(self, pdf, x = 0, y = 0):
@@ -690,7 +677,7 @@ class Title(Paragraph):
         for item in self.items:
             if item:
                 item.style = 'title'
-        Paragraph.resizePDF(self, pdf, x + self.width * 0.1, y)
+        ParagraphBox.resizePDF(self, pdf, x + self.width * 0.1, y)
         
 #---------------------------------------------------------------------------------
 class Document(DocItem):
