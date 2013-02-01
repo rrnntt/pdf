@@ -251,4 +251,23 @@ class TestLatexParsers(unittest.TestCase):
         pdf.output('out/latex/test_Paragraphs_with_maths.pdf', 'F')
         
     def test_InlineMathParser(self):
-        pass
+        pdf = FPDF()
+        lp.initPDF(pdf)
+        
+        def tester(pdf,s, y):
+            p = lp.InlineMathParser()
+            p.match( s )
+            self.assertTrue( p.hasMatch() )
+            par = p.docItem
+            par.resizePDF(pdf,10,y)
+            par.cellPDF(pdf)
+            
+        tester(pdf, 'a+b-1', 10)
+        tester(pdf, r'\frac{ \sin(2\alpha) }{\cos\alpha}', 20)
+        tester(pdf, r'\sum_{i=0}^{N/2} x', 40)
+        tester(pdf, r'\prod_{j=1}^{\Omega} (j+1)', 60)
+        tester(pdf, r'\prod_{j} (j+1)', 80)
+        tester(pdf, r'\prod^{\Omega} (j+1)', 100)
+        
+        pdf.output('out/latex/test_inline_maths.pdf', 'F')
+        

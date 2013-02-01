@@ -375,6 +375,7 @@ class TestStringParser(unittest.TestCase):
         p.match(s)
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'aaa')
+        self.assertTrue(p[2] == p.lastToken())
         
         p = sp.ListParser( sp.CharParser('a') )
         p.match('')
@@ -386,6 +387,7 @@ class TestStringParser(unittest.TestCase):
         p.match(s)
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'')
+        #self.assertTrue(p.lastToken() == None)
         
         p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
         s = 'h,e,l,l,o'
@@ -394,6 +396,7 @@ class TestStringParser(unittest.TestCase):
         self.assertEqual(p.getMatch(s),'h,e,l,l,o')
         res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
         self.assertEqual(res,'hello')
+        self.assertTrue(p[8] == p.lastToken())
 
         p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
         s = 'h,e,l,l,o,'
@@ -404,12 +407,13 @@ class TestStringParser(unittest.TestCase):
         self.assertEqual(res,'hello')
         # token parser failed on the last empty token doesn't have a match
         self.assertFalse(p[10].hasMatch())
+        self.assertTrue(p[9] == p.lastToken())
 
         p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(','), False) )
         s = 'h,e,l,l,o,'
         p.match(s)
         self.assertFalse(p.hasMatch())
-        
+                
     def test_AltParser(self):
         
         s = 'hello'

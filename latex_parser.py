@@ -123,7 +123,7 @@ class MathSignParser(LatexParser):
         return MathSignParser()
     
     def _test(self, s, start, end):
-        parser = CharParser('+-=><,!/')
+        parser = CharParser('+-=><,!/()')
         parser.match(s, start, end)
         if not parser.hasMatch():
             return (False, 0)
@@ -185,7 +185,7 @@ class MathFracParser(LatexParser):
 
     def clone(self):
         """Implement cloning"""
-        return MathFracParser()
+        return MathFracParser(self.inner_parser)
     
     def _test(self, s, start, end):
         numerator = self.inner_parser()
@@ -205,6 +205,57 @@ class MathFracParser(LatexParser):
         return (True, parser.getEnd() - start)
     
 #---------------------------------------------------------------------------------
+class MathSumParser(LatexParser):
+    def __init__(self, inner_parser):
+        LatexParser.__init__(self, mode='math-var')
+        self.inner_parser = inner_parser
+
+    def clone(self):
+        """Implement cloning"""
+        return MathSumParser(self.inner_parser)
+    
+    def _test(self, s, start, end):
+        below = self.inner_parser()
+        above = self.inner_parser()
+        
+        names = {'sum':'Sigma', 'prod': 'Pi'}
+        
+        nameParser = AltParser()
+        for name in names:
+            nameParser.addParser(StringParser(name))
+        parser = SeqParser()
+        parser.addParser( CharParser('\\') )
+        parser.addParser(nameParser)
+        parser.match(s, start, end)
+        if not parser.hasMatch():
+            return (False, 0)
+        
+        start1 = parser.getEnd()
+        parser = SeqParser()
+        parser.addParser( CharParser('_') )
+        parser.addParser( BracketsParser('{','}',below) )
+        parser.match(s, start1, end)
+        if parser.hasMatch():
+            start1 = parser.getEnd()
+        parser = SeqParser()
+        parser.addParser( CharParser('^') )
+        parser.addParser( BracketsParser('{','}',above) )
+        parser.match(s, start1, end)
+        
+        if below.hasMatch():
+            below = below.docItem
+        else:
+            below = None
+            
+        if above.hasMatch():
+            above = above.docItem
+        else:
+            above = None
+            
+        self.docItem = MathSumLike(names[nameParser.getMatch(s)],below,above)
+        return (True, parser.getEnd() - start)
+    
+#---------------------------------------------------------------------------------
 class InlineMathItemParser(LatexParser):
     """Parser for an item in a paragraph: a word or a command."""
     def __init__(self, recursion_parser):
@@ -217,6 +268,7 @@ class InlineMathItemParser(LatexParser):
         self.parser.addParser( MathVariableParser() )
         self.parser.addParser( MathNumberParser() )
         self.parser.addParser( MathFracParser(self.recursion_parser) )
+        self.parser.addParser( MathSumParser(self.recursion_parser) )
         
     def clone(self):
         """Implement cloning"""

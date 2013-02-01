@@ -454,6 +454,19 @@ class ListParser(MultiParser):
                 # clone the delimiter parser
                 d = self._parsers[1].clone() 
                 self.addParser(d)
+                
+    def lastToken(self):
+        if not self.hasMatch():
+            return None
+        if len(self._parsers) < 2:
+            return None
+        elif self._canLastBeEmpty:
+            if self._hasDelimiter:
+                return self._parsers[-2]
+            else:
+                return self._parsers[-1]
+        else:
+            return self._parsers[-2]
                     
 class AltParser(MultiParser):
     """A set of alternative parsers."""
