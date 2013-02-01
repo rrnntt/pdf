@@ -107,14 +107,15 @@ class MultiItem(DocItem):
                 rect.unite(item.rect)
         return rect
     
-    def cellPDF(self, pdf):
+    def cellPDF(self, pdf, r = None):
         """Output the item to PDF"""
-        style = ''
+        style = self.style
         for item in self.items:
             if item:
-                if hasattr(item,'style') and item.style != style:
-                    setFontPDF(pdf, item.style, self.styles)
-                item.cellPDF(pdf)
+                if item.style != style:
+                    style = item.style
+                    self.setFontPDF(pdf, item)
+                item.cellPDF(pdf, r)
                 
     def scaleFont(self,factor):
         """Scale font size by a factor"""
@@ -216,11 +217,16 @@ class TextItem(DocItem):
         height = pdf.font_size_pt / pdf.k
         self.rect = Rect( x, y, x + width, y + height )
     
-    def cellPDF(self, pdf):
-        r = self.rect
-        pdf.set_y( r.y0() )
-        pdf.set_x( r.x0() )
-        pdf.cell( r.width(), r.height(), self.getText() )
+    def cellPDF(self, pdf, r = None):
+        if r:
+            x_shift = r.x0()
+            y_shift = r.y0()
+        else:
+            x_shift = 0.0
+            y_shift = 0.0
+        pdf.set_y( self.rect.y0() - y_shift )
+        pdf.set_x( self.rect.x0() - x_shift )
+        pdf.cell( self.rect.width(), self.rect.height(), self.getText() )
         
     def refit(self):
         """Doesn't need to do anything as cellPDF uses self.rect to output the content"""
@@ -384,11 +390,17 @@ class MathFrac(MultiItem):
         self.rect.unite(denominator.rect)
         self.rect.adjust(rect.Point(0,0),rect.Point(dx,0))
 
-    def cellPDF(self, pdf):
-        MultiItem.cellPDF(self, pdf)
+    def cellPDF(self, pdf, r = None):
+        MultiItem.cellPDF(self, pdf, r)
         y = self.items[0].rect.y1()
         pdf.set_line_width(0.2)
-        pdf.line(self.rect.x0(), y, self.rect.x1(), y)
+        if r:
+            x_shift = r.x0()
+            y_shift = r.y0()
+        else:
+            x_shift = 0.0
+            y_shift = 0.0
+        pdf.line(self.rect.x0() - x_shift, y - y_shift, self.rect.x1() - x_shift, y - y_shift)
         #self.showRect(pdf)
 
 #---------------------------------------------------------------------------------
@@ -577,8 +589,11 @@ class MathSubSuperscript(MultiItem):
         self.refit()
     
 #---------------------------------------------------------------------------------
-class ParagraphBox(MultiItem):
-    """ParagraphBox of a document."""
+class Paragraph(MultiItem):
+    """Paragraph of a document. 
+    
+    If width isn't set the box is positioned relative the pdf's page margins. 
+    """
     def __init__(self, width = -1):
         MultiItem.__init__(self)
         self.style = ('body',1)
@@ -587,7 +602,7 @@ class ParagraphBox(MultiItem):
         self.textAlignment = 'j'
         # parent Document
         self.doc = None
-        # pointerr to the local styles dict
+        # pointer to the local styles dict
         self.styles = default_styles
         # spaces added before and after the paragraph. negative values mean to be set to defaults in resizePDF
         self.t_margin = -1
@@ -619,17 +634,20 @@ class ParagraphBox(MultiItem):
 
         if self.width <= 0:
             self.width = pdf.fw - pdf.l_margin - pdf.r_margin - x
+            y += pdf.t_margin
+            xstart = pdf.l_margin + x
+            xend = pdf.l_margin + x + self.width
+        else:
+            xstart = x
+            xend = x + self.width
+        
         self.space = pdf.get_string_width(' ')
-        self.lineHeight = pdf.font_size_pt / pdf.k * 1.2
+        self.lineHeight = self.getLineHeight(pdf) * 1.2
         if self.t_margin < 0:
             self.t_margin = self.lineHeight * 0.5
         if self.b_margin < 0:
             self.b_margin = self.lineHeight
             
-        
-        y += pdf.t_margin
-        xstart = pdf.l_margin + x
-        xend = pdf.l_margin + x + self.width
         self.rect = Rect( xstart, y, xend, y )
         y += self.t_margin
 
@@ -663,11 +681,26 @@ class ParagraphBox(MultiItem):
         self.rect.adjust(rect.Point(0,0), rect.Point(0,self.b_margin))
         self.refit()
             
+    def outputPDF(self, pdf, r):
+        """Output the paragraph to PDF"""
+        style = self.style
+        for item in self.items:
+            if item:
+                if item.style != style:
+                    style = item.style
+                    self.setFontPDF(pdf, item)
+                if item.rect.y1() > r.y0() + r.height():# - self.doc.pdf.t_margin:
+                    self.doc.addPage()
+                    print r,item.rect
+                    dy = item.rect.y0() - r.y0() - self.doc.pdf.t_margin
+                    r.translate(0, dy)
+                item.cellPDF(pdf, r)
+                
 #---------------------------------------------------------------------------------
-class Title(ParagraphBox):
+class Title(Paragraph):
     """Print a document title."""
     def __init__(self, width = -1):
-        ParagraphBox.__init__(self, width)
+        Paragraph.__init__(self, width)
         self.textAlignment = 'c'
         
     def resizePDF(self, pdf, x = 0, y = 0):
@@ -677,34 +710,37 @@ class Title(ParagraphBox):
         for item in self.items:
             if item:
                 item.style = 'title'
-        ParagraphBox.resizePDF(self, pdf, x + self.width * 0.1, y)
+        Paragraph.resizePDF(self, pdf, x + self.width * 0.1, y)
         
 #---------------------------------------------------------------------------------
-class Document(DocItem):
+class Document:
     """Entire document"""
     def __init__(self):
-        DocItem.__init__(self)
         self.styles = {'body': ('times', '', 12),
                       'title': ('times', 'B', 16),
                       'symbol': ('symbol','', 12),
                        }
+        self.paragraphs = []
         
-    def appendItem(self, item):
+    def appendParagraph(self, para):
         """Append a child document item."""
-        self.items.append(item)
-        item.setDocument( self )
+        self.paragraphs.append(para)
+        para.setDocument( self )
         
     def setPDF(self, pdf):
         """Set a FPDF object to output the document to"""
         self.pdf = pdf
-        pdf.add_page()
-        pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
+        initPDF(pdf)
+        pdf.set_auto_page_break(False)
+        self.page_height = pdf.fh - pdf.t_margin
         # resize the child items
         y = 0
-        for item in self.items:
-            if item:
-                item.resizePDF(pdf, 0, y)
-                y += item.rect.height() 
+        for para in self.paragraphs:
+            para.resizePDF(pdf, 0, y)
+            y += para.rect.height() 
+    
+    def addPage(self):
+        self.pdf.add_page()
     
     def outputPDF(self, destName, destType = 'F'):
         """Output this document to a PDF object.
@@ -713,8 +749,8 @@ class Document(DocItem):
             destName (str): name of the destination (eg filename);
             destType (str): type of the destination: 'F' for file, 'S' for string
         """
-        for item in self.items:
-            if item:
-                item.cellPDF(self.pdf)
+        r = Rect(0,0,self.pdf.fw, self.page_height)
+        for para in self.paragraphs:
+            para.outputPDF(self.pdf, r)
                 
         self.pdf.output(destName, destType)

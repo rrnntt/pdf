@@ -598,36 +598,42 @@ class TestDocument(unittest.TestCase):
         
         pdf.output('out/test_Formulas.pdf', 'F')
         
-    def test_ParagraphBox(self):
-        self.do_for_each_DocItem_class(ParagraphBox())
+    def test_Paragraph(self):
+        self.do_for_each_DocItem_class(Paragraph())
         
         pdf = FPDF()
         initPDF(pdf)
         pdf.set_line_width(2)
         pdf.line(0, 20, 300, 20)
         
-        par = ParagraphBox()
+        par = Paragraph()
         par.addItems(*[w('Hello'),w('world!')])
         par.addItems(w('Formula:'),b(v('x'),si('+'),f(sy('alpha'),n('2'))))
-        
         par.resizePDF(pdf)
         par.cellPDF(pdf)
+        par.showRect(pdf)
         
-        pdf.output('out/test_ParagraphBox.pdf', 'F')
+        par = Paragraph(100)
+        par.addItems(w('I'),w('have'),w('my'),w('width'),w('set.'))
+        par.resizePDF(pdf)
+        par.cellPDF(pdf)
+        par.showRect(pdf)
         
-#    def test_Paragraph1(self):
-#        
-#        pdf = FPDF('P','mm',(100,40))
-#        initPDF(pdf)
-#        
-#        par = ParagraphBox()
-#        words = []
-#        for i in range(50):
-#            words.append(w('hello '+str(i+1)))
-#        par.addItems(*words)
-#        
-#        par.resizePDF(pdf)
-#        par.cellPDF(pdf)
-#        
-#        pdf.output('out/test_Paragraph1.pdf', 'F')
+        pdf.output('out/test_Paragraph.pdf', 'F')
+        
+    def test_Document(self):
+        
+        pdf = FPDF('P','mm',(100,40))
+        
+        doc = Document()
+        
+        par = Paragraph()
+        words = []
+        for i in range(50):
+            words.append(w('hello '+str(i+1)))
+        par.addItems(*words)
 
+        doc.appendParagraph(par)        
+        doc.setPDF(pdf)
+        doc.outputPDF('out/test_Paragraph1.pdf', 'F')
+        
