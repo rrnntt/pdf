@@ -2,6 +2,7 @@
 import unittest
 import latex_parser as lp
 from fpdf import FPDF
+from document import initPDF, setFontPDF
 
 long_string = 'The year 1866 was marked by a bizarre development, an unexplained and downright  inexplicable phenomenon that surely no one has forgotten. Without getting into those rumors that upset civilians in the seaports and deranged the public'
 
@@ -22,9 +23,8 @@ class TestLatexParsers(unittest.TestCase):
 
     def test_greek_letters(self):
         pdf=FPDF()
-        pdf.add_page()
-        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
-        pdf.set_font('DejaVu','',16)
+        initPDF(pdf)
+        setFontPDF(pdf,'symbol')
         
         p = lp.ListParser( lp.CommandParser(lp.ParagraphItemCreator) )
         s = r'\alpha\beta\gamma'
@@ -34,7 +34,7 @@ class TestLatexParsers(unittest.TestCase):
         self.assertEquals( res, u'\u03b1 \u03b2 \u03b3')
         
         pdf.write(0, res)
-        pdf.output('test_greek_letters.pdf', 'F')
+        pdf.output('out/latex/test_greek_letters.pdf', 'F')
         
     def test_WordParser(self):
         
@@ -89,7 +89,7 @@ class TestLatexParsers(unittest.TestCase):
         pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
         pdf.set_font('DejaVu','',11)
         pdf.write(10, p.docItem.writePDF())
-        pdf.output('test.pdf', 'F')
+        pdf.output('out/latex/test.pdf', 'F')
 
     def test_Word_cellPDF(self):
         
@@ -99,9 +99,7 @@ class TestLatexParsers(unittest.TestCase):
         self.assertTrue( p.hasMatch() )
         self.assertEquals( p.getMatch(s), 'alpha')
         pdf=FPDF()
-        pdf.add_page()
-        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
-        pdf.set_font('times','',11)
+        initPDF(pdf)
         
         p.docItem.resizePDF( pdf )
         p.docItem.cellPDF( pdf )
@@ -116,12 +114,13 @@ class TestLatexParsers(unittest.TestCase):
 
         p = lp.CommandParser(lp.ParagraphItemCreator)
         p.match(r'\alpha')
-        pdf.set_font('DejaVu','',11)
+        setFontPDF(pdf,'symbol')
+        #pdf.set_font('DejaVu','',11)
 
         p.docItem.resizePDF( pdf, r.x1() + 10, r.y0() )
         p.docItem.cellPDF( pdf )
         
-        pdf.output('test_Word_cellPDF.pdf', 'F')
+        pdf.output('out/latex/test_Word_cellPDF.pdf', 'F')
         
 
     def test_Paragraph_cellPDF(self):
@@ -133,12 +132,11 @@ class TestLatexParsers(unittest.TestCase):
         self.assertTrue( p.hasMatch() )
         p.docItem.textAlignment = 'c'
         pdf=FPDF()
-        pdf.add_page()
-        pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
-        pdf.set_font('symbol','',16)
+        initPDF(pdf)
+        setFontPDF(pdf,'symbol')
         p.docItem.resizePDF(pdf)
         p.docItem.cellPDF(pdf)
-        pdf.output('test_Paragraph_cellPDF.pdf', 'F')
+        pdf.output('out/latex/test_Paragraph_cellPDF.pdf', 'F')
         
     def test_initPDF(self):
         
@@ -152,7 +150,7 @@ class TestLatexParsers(unittest.TestCase):
         lp.initPDF(pdf)
         doc.resizePDF(pdf)
         doc.cellPDF(pdf)
-        pdf.output('test_initPDF.pdf', 'F')
+        pdf.output('out/latex/test_initPDF.pdf', 'F')
         
     def test_Greek(self):
         
@@ -172,7 +170,7 @@ class TestLatexParsers(unittest.TestCase):
         lp.initPDF(pdf)
         doc.resizePDF(pdf)
         doc.cellPDF(pdf)
-        pdf.output('test_greek.pdf', 'F')
+        pdf.output('out/latex/test_greek.pdf', 'F')
         
     def test_Two_Paragraphs(self):
         
@@ -186,6 +184,7 @@ class TestLatexParsers(unittest.TestCase):
         par1 = p1.docItem
         par1.resizePDF(pdf)
         par1.cellPDF(pdf)
+        par1.showRect(pdf)
 
         p2 = lp.ParagraphParser()
         p2.match( s )
@@ -201,7 +200,7 @@ class TestLatexParsers(unittest.TestCase):
         par2.resizePDF(pdf, 20, 60)
         par2.cellPDF(pdf)
         
-        pdf.output('test_Two_Paragraphs.pdf', 'F')
+        pdf.output('out/latex/test_Two_Paragraphs.pdf', 'F')
         
     def test_Title(self):
         
@@ -212,7 +211,8 @@ class TestLatexParsers(unittest.TestCase):
         title.appendItem(lp.Word('Title'))
         title.resizePDF(pdf)
         title.cellPDF(pdf)
-        pdf.output('test_Title.pdf', 'F')
+        title.showRect(pdf)
+        pdf.output('out/latex/test_Title.pdf', 'F')
         
     def test_TitleParser(self):
         pdf = FPDF()
@@ -223,7 +223,7 @@ class TestLatexParsers(unittest.TestCase):
         self.assertTrue( p.hasMatch() )
         p.docItem.resizePDF(pdf)
         p.docItem.cellPDF(pdf)
-        pdf.output('test_TitleParser.pdf', 'F')
+        pdf.output('out/latex/test_TitleParser.pdf', 'F')
         
     def test_DocumentParser(self):
         
@@ -233,11 +233,11 @@ class TestLatexParsers(unittest.TestCase):
         self.assertTrue( p.hasMatch() )
         doc = p.docItem
         doc.setPDF(FPDF())
-        doc.outputPDF('test_DocumentParser.pdf')
+        doc.outputPDF('out/latex/test_DocumentParser.pdf')
         
     def test_Paragraphs_with_maths(self):
         
-        s = 'Hello, $$maths$$ maths!'
+        s = r'Hello, $ x+  y- \frac{\beta-1} { 2}\sin \alpha/2 +0.3$ maths!'
         pdf = FPDF()
         lp.initPDF(pdf)
 
@@ -248,6 +248,7 @@ class TestLatexParsers(unittest.TestCase):
         par.resizePDF(pdf)
         par.cellPDF(pdf)
         
-        pdf.output('test_Paragraphs_with_maths.pdf', 'F')
+        pdf.output('out/latex/test_Paragraphs_with_maths.pdf', 'F')
         
-        
+    def test_InlineMathParser(self):
+        pass

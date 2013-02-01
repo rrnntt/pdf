@@ -164,7 +164,7 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(w.text, 'word')
         self.assertEqual(w.style, 'body')
         w.cellPDF(pdf)
-        pdf.output('out/test_Word.pdf', 'F')
+        pdf.output('out/document/test_Word.pdf', 'F')
         
     def test_Symbol(self):
         self.do_for_each_DocItem_class(Symbol('alpha'))
@@ -180,7 +180,7 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(w.text, 'alpha')
         self.assertEqual(w.style, 'symbol')
         w.cellPDF(pdf)
-        pdf.output('out/test_Symbol.pdf', 'F')
+        pdf.output('out/document/test_Symbol.pdf', 'F')
 
     def test_MathVariable(self):
         self.do_for_each_DocItem_class(MathVariable('var'))
@@ -196,7 +196,7 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(w.text, 'var')
         self.assertEqual(w.style, 'math-var')
         w.cellPDF(pdf)
-        pdf.output('out/test_MathVariable.pdf', 'F')
+        pdf.output('out/document/test_MathVariable.pdf', 'F')
         
     def test_MathSign(self):
         self.do_for_each_DocItem_class(MathSign('var'))
@@ -217,7 +217,7 @@ class TestDocument(unittest.TestCase):
         self.assertEqual(minus.style, 'math-symbol')
         minus.cellPDF(pdf)
         plus.cellPDF(pdf)
-        pdf.output('out/test_MathSign.pdf', 'F')
+        pdf.output('out/document/test_MathSign.pdf', 'F')
         
     def test_InlineMathBlock(self):
         self.do_for_each_DocItem_class(InlineMathBlock())
@@ -234,7 +234,7 @@ class TestDocument(unittest.TestCase):
         
         block.resizePDF(pdf, 10, 20)
         block.cellPDF(pdf)
-        pdf.output('out/test_InlineMathBlock.pdf', 'F')
+        pdf.output('out/document/test_InlineMathBlock.pdf', 'F')
         
     def test_MathFun(self):
         self.do_for_each_DocItem_class(InlineMathBlock())
@@ -258,7 +258,7 @@ class TestDocument(unittest.TestCase):
         block.moveTo(10, 30)
         block.cellPDF(pdf)
         
-        pdf.output('out/test_MathFunction.pdf', 'F')
+        pdf.output('out/document/test_MathFunction.pdf', 'F')
                 
     def test_ScaleFont(self):
         self.do_for_each_DocItem_class(InlineMathBlock())
@@ -287,7 +287,7 @@ class TestDocument(unittest.TestCase):
         block.resizePDF(pdf, 10, 40)
         block.cellPDF(pdf)
         
-        pdf.output('out/test_ScaleFactor.pdf', 'F')
+        pdf.output('out/document/test_ScaleFactor.pdf', 'F')
 
     def test_MathPower(self):
         tmp = MathPower()
@@ -316,7 +316,7 @@ class TestDocument(unittest.TestCase):
         p.cellPDF(pdf)
         
         
-        pdf.output('out/test_MathPower.pdf', 'F')
+        pdf.output('out/document/test_MathPower.pdf', 'F')
 
     def test_MathBrackets(self):
         tmp = MathBrackets()
@@ -343,7 +343,7 @@ class TestDocument(unittest.TestCase):
         p.resizePDF(pdf, 10, 20)
         p.cellPDF(pdf)
 
-        pdf.output('out/test_MathBrackets.pdf', 'F')
+        pdf.output('out/document/test_MathBrackets.pdf', 'F')
 
     def test_MathFrac(self):
         tmp = MathFrac()
@@ -393,7 +393,7 @@ class TestDocument(unittest.TestCase):
         p.resizePDF(pdf, 10, 80)
         p.cellPDF(pdf)
         
-        pdf.output('out/test_MathFrac.pdf', 'F')
+        pdf.output('out/document/test_MathFrac.pdf', 'F')
 
     def test_MathBigBrackets(self):
         tmp = MathBigBrackets()
@@ -437,7 +437,7 @@ class TestDocument(unittest.TestCase):
         brackets.resizePDF(pdf, 10, 70)
         brackets.cellPDF(pdf)
         
-        pdf.output('out/test_MathBigBrackets.pdf', 'F')
+        pdf.output('out/document/test_MathBigBrackets.pdf', 'F')
 
     def test_MathBigBrackets1(self):
 
@@ -448,7 +448,7 @@ class TestDocument(unittest.TestCase):
         brackets.resizePDF(pdf, 10, 20)
         brackets.cellPDF(pdf)
         
-        pdf.output('out/test_MathBigBrackets1.pdf', 'F')
+        pdf.output('out/document/test_MathBigBrackets1.pdf', 'F')
 
     def test_MathBelowAndAbove(self):
         tmp = MathBelowAndAbove()
@@ -500,7 +500,7 @@ class TestDocument(unittest.TestCase):
         tilde.resizePDF(pdf, 10, 80)
         tilde.cellPDF(pdf)
         
-        pdf.output('out/test_MathBelowAndAbove.pdf', 'F')
+        pdf.output('out/document/test_MathBelowAndAbove.pdf', 'F')
         
     def test_MathColumn(self):
         self.do_for_each_DocItem_class(MathColumn())
@@ -515,7 +515,7 @@ class TestDocument(unittest.TestCase):
         
         block.resizePDF(pdf, 10, 20)
         block.cellPDF(pdf)
-        pdf.output('out/test_MathColumn.pdf', 'F')
+        pdf.output('out/document/test_MathColumn.pdf', 'F')
         
     def test_MathSum(self):
         self.do_for_each_DocItem_class(MathSum())
@@ -530,7 +530,7 @@ class TestDocument(unittest.TestCase):
         summ.resizePDF(pdf, 10, 20)
         summ.cellPDF(pdf)
         
-        pdf.output('out/test_MathSum.pdf', 'F')
+        pdf.output('out/document/test_MathSum.pdf', 'F')
 
     def test_MathProd(self):
         self.do_for_each_DocItem_class(MathProd())
@@ -545,7 +545,7 @@ class TestDocument(unittest.TestCase):
         prod.resizePDF(pdf, 10, 10)
         prod.cellPDF(pdf)
         
-        pdf.output('out/test_MathProd.pdf', 'F')
+        pdf.output('out/document/test_MathProd.pdf', 'F')
 
     def test_MathSubSuperscript(self):
         self.do_for_each_DocItem_class(MathSubSuperscript(MathVariable('x'),MathVariable('2')))
@@ -576,14 +576,14 @@ class TestDocument(unittest.TestCase):
         sss.resizePDF(pdf, 10, 40)
         sss.cellPDF(pdf)
         
-        pdf.output('out/test_MathSubSuperscript.pdf', 'F')
+        pdf.output('out/document/test_MathSubSuperscript.pdf', 'F')
 
     def test_formulas(self):
         
         pdf = FPDF()
         initPDF(pdf)
         
-        formula = b( v('x'), si('-'), v('y'), si('+'), n('1'), si('='), n('0') )
+        formula = b( v('x'), si('-'), sy('alpha'), si('+'), n('1'), si('='), n('0') )
         formula.resizePDF(pdf,10,10)
         formula.cellPDF(pdf)
         
@@ -596,7 +596,7 @@ class TestDocument(unittest.TestCase):
         formula.resizePDF(pdf,10,30)
         formula.cellPDF(pdf)
         
-        pdf.output('out/test_Formulas.pdf', 'F')
+        pdf.output('out/document/test_Formulas.pdf', 'F')
         
     def test_Paragraph(self):
         self.do_for_each_DocItem_class(Paragraph())
@@ -619,7 +619,7 @@ class TestDocument(unittest.TestCase):
         par.cellPDF(pdf)
         par.showRect(pdf)
         
-        pdf.output('out/test_Paragraph.pdf', 'F')
+        pdf.output('out/document/test_Paragraph.pdf', 'F')
         
     def test_Document(self):
         
@@ -627,13 +627,16 @@ class TestDocument(unittest.TestCase):
         
         doc = Document()
         
+        title = Title()
+        title.addItems(w('Hello'),w('world!'))
         par = Paragraph()
         words = []
         for i in range(50):
             words.append(w('hello '+str(i+1)))
         par.addItems(*words)
 
-        doc.appendParagraph(par)        
+        doc.appendParagraph(title) 
+        doc.appendParagraph(par) 
         doc.setPDF(pdf)
-        doc.outputPDF('out/test_Paragraph1.pdf', 'F')
+        doc.outputPDF('out/document/test_Paragraph1.pdf')
         

@@ -195,6 +195,8 @@ symbols = {'alpha': u'\u03b1',
            'Omega': u'\u03a9',          
            }
 
+funs = ['sin', 'cos', 'log']
+
 #---------------------------------------------------------------------------------
 class TextItem(DocItem):
     """Prints some form of text"""
@@ -648,7 +650,6 @@ class Paragraph(MultiItem):
         if self.b_margin < 0:
             self.b_margin = self.lineHeight
             
-        self.rect = Rect( xstart, y, xend, y )
         y += self.t_margin
 
         rectList = []
@@ -673,12 +674,15 @@ class Paragraph(MultiItem):
             if not onFirstLine:
                 for r in rectList:
                     r.translate(rect.Point(0,self.lineHeight))
-            for r in rectList[:n]:
-                self.rect.unite(r)
+#            for r in rectList[:n]:
+#                self.rect.unite(r)
             onFirstLine = False
             del rectList[:n]
-        # add the bottom margin
-        self.rect.adjust(rect.Point(0,0), rect.Point(0,self.b_margin))
+        #self.rect = Rect( xstart, y, xend, y )
+        self.rect = self.getUnionRect()
+        # add top and bottom margins
+        self.margins = rect.Point(0,self.t_margin)
+        self.rect.adjust(rect.Point(0,-self.t_margin), rect.Point(0,self.b_margin))
         self.refit()
             
     def outputPDF(self, pdf, r):
@@ -691,7 +695,6 @@ class Paragraph(MultiItem):
                     self.setFontPDF(pdf, item)
                 if item.rect.y1() > r.y0() + r.height():# - self.doc.pdf.t_margin:
                     self.doc.addPage()
-                    print r,item.rect
                     dy = item.rect.y0() - r.y0() - self.doc.pdf.t_margin
                     r.translate(0, dy)
                 item.cellPDF(pdf, r)
@@ -705,12 +708,18 @@ class Title(Paragraph):
         
     def resizePDF(self, pdf, x = 0, y = 0):
         if self.width <= 0:
-            self.width = pdf.fw - pdf.l_margin - pdf.r_margin - x
+            self.width = pdf.fw - pdf.r_margin - x - pdf.l_margin
             self.width *= 0.8
+            x_start = x + pdf.l_margin
+            y_start = y + pdf.t_margin
+        else:
+            x_start = x
+            y_start = y
+            
         for item in self.items:
             if item:
                 item.style = 'title'
-        Paragraph.resizePDF(self, pdf, x + self.width * 0.1, y)
+        Paragraph.resizePDF(self, pdf, x_start + self.width * 0.1, y_start)
         
 #---------------------------------------------------------------------------------
 class Document:

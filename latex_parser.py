@@ -28,7 +28,6 @@ doc_command_names_1 = {'title': Title,
 #---------------------------------------------------------------------------------
 class LatexParser(Parser):
     """Base class for latex parsers."""
-    docItem = None
     def __init__(self, mode = 'body'):
         """Constructor.
     
@@ -37,6 +36,7 @@ class LatexParser(Parser):
         """
         Parser.__init__(self)
         self.mode = mode
+        self.docItem = None
 
 #---------------------------------------------------------------------------------
 class CommandParser(LatexParser):
@@ -97,18 +97,130 @@ def ParagraphItemCreator(cmd_name, arg1 = None):
     return None
     
 #---------------------------------------------------------------------------------
+class MathVariableParser(LatexParser):
+    def __init__(self):
+        LatexParser.__init__(self, mode='math-var')
+
+    def clone(self):
+        """Implement cloning"""
+        return MathVariableParser()
+    
+    def _test(self, s, start, end):
+        parser = AlphaParser()
+        parser.match(s, start, end)
+        if not parser.hasMatch():
+            return (False, 0)
+        self.docItem = MathVariable(parser.getMatch(s))
+        return (True, parser.getEnd() - start)
+
+#---------------------------------------------------------------------------------
+class MathSignParser(LatexParser):
+    def __init__(self):
+        LatexParser.__init__(self, mode='math-var')
+
+    def clone(self):
+        """Implement cloning"""
+        return MathSignParser()
+    
+    def _test(self, s, start, end):
+        parser = CharParser('+-=><,!/')
+        parser.match(s, start, end)
+        if not parser.hasMatch():
+            return (False, 0)
+        self.docItem = MathSign(parser.getMatch(s))
+        return (True, parser.getEnd() - start)
+
+#---------------------------------------------------------------------------------
+class MathSymbolParser(LatexParser):
+    def __init__(self):
+        LatexParser.__init__(self, mode='math-var')
+
+    def clone(self):
+        """Implement cloning"""
+        return MathSymbolParser()
+    
+    def _test(self, s, start, end):
+        parser = SeqParser()
+        parser.addParser( CharParser('\\') )
+        parser.addParser( AlphaParser() )
+        parser.match(s, start, end)
+        if not parser.hasMatch():
+            return (False, 0)
+        name = parser[1].getMatch(s)
+        if name in symbols:
+            self.docItem = Symbol(name)
+            return (True, parser.getEnd() - start)
+        elif name in funs:
+            self.docItem = MathFunction(name)
+            return (True, parser.getEnd() - start)
+        else:
+            return (False, 0)
+
+#---------------------------------------------------------------------------------
+class MathNumberParser(LatexParser):
+    def __init__(self):
+        LatexParser.__init__(self, mode='math-var')
+
+    def clone(self):
+        """Implement cloning"""
+        return MathNumberParser()
+    
+    def _test(self, s, start, end):
+        parser = SeqParser()
+        parser.addParser( ListParser(DigitParser()) )
+        parser.addParser( ListParser(CharParser('.'),True,1) )
+        parser.addParser( ListParser(DigitParser(),True) )
+        parser.match(s, start, end)
+        if not parser.hasMatch():
+            return (False, 0)
+        name = parser.getMatch(s)
+        self.docItem = MathNumber(name)
+        return (True, parser.getEnd() - start)
+    
+#---------------------------------------------------------------------------------
+class MathFracParser(LatexParser):
+    def __init__(self, inner_parser):
+        LatexParser.__init__(self, mode='math-var')
+        self.inner_parser = inner_parser
+
+    def clone(self):
+        """Implement cloning"""
+        return MathFracParser()
+    
+    def _test(self, s, start, end):
+        numerator = self.inner_parser()
+        denominator = self.inner_parser()
+        parser = SeqParser()
+        parser.addParser( StringParser('\\frac') )
+        parser.addParser( ZeroOrMoreSpaces() )
+        parser.addParser( BracketsParser('{','}',numerator) )
+        parser.addParser( ZeroOrMoreSpaces() )
+        parser.addParser( BracketsParser('{','}',denominator) )
+        parser.match(s, start, end)
+        if not parser.hasMatch():
+            return (False, 0)
+        self.docItem = MathFrac()
+        self.docItem.appendItem( numerator.docItem )
+        self.docItem.appendItem( denominator.docItem )
+        return (True, parser.getEnd() - start)
+    
+#---------------------------------------------------------------------------------
 class InlineMathItemParser(LatexParser):
     """Parser for an item in a paragraph: a word or a command."""
-    def __init__(self):
+    def __init__(self, recursion_parser):
         """Constructor."""
         LatexParser.__init__(self)
+        self.recursion_parser = recursion_parser
         self.parser = AltParser()
-        self.parser.addParser( WordParser('math-var') )
-        #self.parser.addParser( ParagraphParser() )
+        self.parser.addParser( MathSymbolParser() )
+        self.parser.addParser( MathSignParser() )
+        self.parser.addParser( MathVariableParser() )
+        self.parser.addParser( MathNumberParser() )
+        self.parser.addParser( MathFracParser(self.recursion_parser) )
         
     def clone(self):
         """Implement cloning"""
-        return InlineMathItemParser()
+        return InlineMathItemParser(self.recursion_parser)
 
     def _test(self, s, start, end):
         """Implements the match test."""
@@ -130,7 +242,7 @@ class InlineMathParser(LatexParser):
         LatexParser.__init__(self)
         self.parser = SeqParser()
         self.parser.addParser( ZeroOrMoreSpaces() )
-        self.itemParser = ListParser( (InlineMathItemParser(), ZeroOrMoreSpaces()) )
+        self.itemParser = ListParser( (InlineMathItemParser(InlineMathParser), ZeroOrMoreSpaces()) )
         self.parser.addParser( self.itemParser )
         
     def clone(self):
@@ -180,7 +292,7 @@ class ParagraphItemParser(LatexParser):
         LatexParser.__init__(self, mode)
         self.parser = AltParser()
         self.parser.addParser( CommandParser(ParagraphItemCreator, mode) )
-        self.parser.addParser( ItemInBracketsParser('$$','$$',InlineMathParser()) )
+        self.parser.addParser( ItemInBracketsParser('$','$',InlineMathParser()) )
         self.parser.addParser( WordParser(mode) )
         
     def clone(self):
@@ -205,7 +317,7 @@ class ParagraphItemParser(LatexParser):
 class ParagraphSpaces(Parser):
     """Match 1 or more consequtive empty space characters.
     
-    The empty space characters are ' ', '\t', '\n'. Fails ff meets the paragraph ending sequence '\n\n'.
+    The empty space characters are ' ', '\t', '\n'. Fails if meets the paragraph ending sequence '\n\n'.
     """
     def __init__(self):
         """Constructor."""
@@ -352,7 +464,7 @@ class DocumentParser(LatexParser):
         for i in range(0,n,2):
             p = self.itemParser[i]
             if p.docItem:
-                doc.appendItem(p.docItem)
+                doc.appendParagraph(p.docItem)
         self.docItem = doc
             
         return (True, self.parser.getEnd() - start)

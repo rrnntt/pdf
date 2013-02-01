@@ -299,6 +299,26 @@ class AlphaParser(Parser):
                     return (True, i - start)
         return (True, end - start)
 
+class DigitParser(Parser):
+    """Match a string containing digits only characters."""
+    def __init__(self):
+        """Constructor."""
+        Parser.__init__(self)
+        
+    def clone(self):
+        """Implements cloning."""
+        return DigitParser()
+
+    def _test(self, s, start, end):
+        """Implements the match test."""
+        for i in range(start,end):
+            if not s[i].isdigit():
+                if i == start:
+                    return (False, 0)
+                else:
+                    return (True, i - start)
+        return (True, end - start)
+
 class MultiParser(Parser):
     """Base class for a complex parser containing other parsers."""
     def __init__(self):
@@ -359,7 +379,7 @@ class SeqParser(MultiParser):
 
 class ListParser(MultiParser):
     """Parsers a list of similar tokens. All tokens must be matched by the same type of parser."""
-    def __init__(self, parser, zero = False):
+    def __init__(self, parser, zero = False, max_matches = -1):
         """Constructor.
         
         Args:
@@ -370,6 +390,7 @@ class ListParser(MultiParser):
         """
         MultiParser.__init__(self)
         self._canMatchEmpty = zero
+        self._maxMatches = max_matches # maximum number of matches, -1 means infinite
         if isinstance(parser, Parser):
             self.addParser(parser)
             self._hasDelimiter = False
@@ -398,6 +419,7 @@ class ListParser(MultiParser):
             d = self._parsers[1]
         done = False
         i = start
+        nFound = 0
         while not done: 
             # try the token parser
             p.match(s,i,end)
@@ -418,6 +440,11 @@ class ListParser(MultiParser):
                 d.match(s,i,end)
                 if not d.hasMatch():
                     return (True, i - start)
+            if self._maxMatches > 0:
+                if nFound >= self._maxMatches:
+                    return False,0
+                nFound += 1
+            
             # token and delimiter matched: prepare next iteration
             i = self._parsers[-1].getEnd()
             # clone the token parser
