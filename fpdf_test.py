@@ -3,7 +3,7 @@ from fpdf import FPDF
 import os.path
 
 hello_world = 'Hello World!'
-hello_world_file = 'out/HelloWorld.pdf'
+hello_world_file = 'out/fpdf/HelloWorld.pdf'
 
 class TestFPDF(unittest.TestCase):
     
@@ -26,7 +26,18 @@ class TestFPDF(unittest.TestCase):
         pdf.write(30, 'small text')
         pdf.set_font('Arial','',24)
         pdf.write(30, 'Large text')
-        pdf.output('out/test_pdf_write.pdf', 'F')
+        pdf.output('out/fpdf/test_pdf_write.pdf', 'F')
+
+    def test_ttf(self):
+        pdf=FPDF()
+        pdf.add_font('test','','font/lmroman7-italic.ttf',uni=True)
+        pdf.add_page()
+        pdf.set_font('test', '', 14)
+        pdf.write(10, 'hello')
+        pdf.set_font('test', '', 24)
+        pdf.write(10, 'hello')
+        pdf.output('out/fpdf/test_ttf.pdf', 'F')
+        
 
     def test_pdf_cell(self):
         pdf=FPDF()
@@ -63,4 +74,4 @@ class TestFPDF(unittest.TestCase):
         pdf.rect(x, y, w, h, '')
         pdf.line(x, y + f * h, x + w, y + f * h)
         
-        pdf.output('out/test_pdf_cell.pdf', 'F')
+        pdf.output('out/fpdf/test_pdf_cell.pdf', 'F')

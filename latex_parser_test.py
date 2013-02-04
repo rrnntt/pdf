@@ -86,7 +86,7 @@ class TestLatexParsers(unittest.TestCase):
         
         pdf=FPDF()
         pdf.add_page()
-        pdf.add_font('DejaVu','','font/DejaVuSansCondensed.ttf',uni=True)
+        pdf.add_font('DejaVu','','font/lmroman7-regular.ttf',uni=True)
         pdf.set_font('DejaVu','',11)
         pdf.write(10, p.docItem.writePDF())
         pdf.output('out/latex/test.pdf', 'F')

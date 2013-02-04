@@ -6,10 +6,10 @@ from rect import Rect
 ######################################################################################
 default_styles = {'body': ('times', '', 12),
           'title': ('times', 'B', 16),
-          'symbol': ('symbol','', 12),
-          'math-var': ('times', 'I', 12),
-          'math-symbol': ('symbol', '', 12),
-          'math-fun': ('times', '', 12),
+          'symbol': ('math-symbol','', 12),
+          'math-var': ('math-var', '', 12),
+          'math-symbol': ('math-symbol', '', 12),
+          'math-fun': ('math-symbol', '', 12),
          }
 
 textAlignments = {'j': rect.justifyX,
@@ -27,8 +27,8 @@ def initPDF(pdf):
     """Set up a FPDF object to work with latex parsers"""
     pdf.c_margin = 0.0 # inner cell margin
     pdf.add_page()
-    pdf.add_font('symbol','','font/DejaVuSansCondensed.ttf',uni=True)
-    #pdf.add_font('math-var','','font/lmroman7-italic.otf',uni=True)
+    pdf.add_font('math-var','','font/lmroman7-italic.ttf',uni=True)
+    pdf.add_font('math-symbol','','font/GFSDidot-Regular.ttf',uni=True)
     f = default_styles['body']
     pdf.set_font(f[0],f[1],f[2])
 

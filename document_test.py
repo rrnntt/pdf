@@ -468,7 +468,7 @@ class TestDocument(unittest.TestCase):
 
         s = MathBelowAndAbove()
         s.appendItem(sigma)
-        s.appendItem(InlineMathBlock(MathVariable('n'),MathSign('='),MathVariable('0')))
+        s.appendItem(InlineMathBlock(MathVariable('n'),MathSign('='),MathNumber('0')))
         s.appendItem(MathVariable('N'))
         
         s.resizePDF(pdf, 10, 10)
@@ -478,7 +478,7 @@ class TestDocument(unittest.TestCase):
         pi.scaleFont(2.0)
 
         prod = MathBelowAndAbove(pi,
-                                 InlineMathBlock(MathVariable('i'),MathSign('='),MathVariable('1')),
+                                 InlineMathBlock(MathVariable('i'),MathSign('='),MathNumber('1')),
                                  MathVariable('M')
                                  )
         
