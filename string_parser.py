@@ -108,7 +108,17 @@ class Parser:
         It points to the unprocessed part of the test string.
         """ 
         return self._start + self._size
+
+    def lookAtParent(self, parser, s):
+        """Complex parsers may call this method to pass a reference to themselves to
+        a child parser. Can be useful in case a parser depends on results of another 
+        sibling parser. 
         
+        Args:
+            parser (Parser): a complex parent parser
+            s (str): string being parsed
+        """
+        pass
 
 class CharParser(Parser):
     """Match a single character from a list."""
@@ -391,14 +401,15 @@ class ListParser(MultiParser):
         MultiParser.__init__(self)
         self._canMatchEmpty = zero
         self._maxMatches = max_matches # maximum number of matches, -1 means infinite
+        self._istesting = False
+        self._token = None
         if isinstance(parser, Parser):
-            self.addParser(parser)
-            self._hasDelimiter = False
+            self._token = parser
+            self._delimiter = None
             self._canLastBeEmpty = False
         else:
-            self.addParser(parser[0])
-            self.addParser(parser[1])
-            self._hasDelimiter = True
+            self._token = parser[0]
+            self._delimiter = parser[1]
             if len(parser) > 2:
                 self._canLastBeEmpty = parser[2]
             else:
@@ -406,67 +417,98 @@ class ListParser(MultiParser):
             
     def clone(self):
         """Implements cloning."""
-        if self._hasDelimiter:
-            p = ListParser((self._parsers[0].clone(), self._parsers[1].clone()),self._canMatchEmpty)
+        if self._delimiter:
+            p = ListParser((self._token.clone(), self._delimiter.clone()),self._canMatchEmpty)
         else:
-            p = ListParser(self._parsers[0].clone(),self._canMatchEmpty)
+            p = ListParser(self._token.clone(),self._canMatchEmpty)
         return p
 
     def _test(self, s, start, end):
         """Implements the match test."""
-        p = self._parsers[0]
-        if self._hasDelimiter:
-            d = self._parsers[1]
+        p = self._token
+        self.addParser(p)
+        if self._delimiter:
+            d = self._delimiter
+            self.addParser(d)
         done = False
         i = start
         nFound = 0
+        self._istesting = True
         while not done: 
             # try the token parser
             p.match(s,i,end)
             if not p.hasMatch():
                 if i == start:
+                    self._istesting = False
+                    del self._parsers[:]
+                    #print 'stop 1'
                     return (self._canMatchEmpty, 0)
                 # if delimiter parser is defined check that the last token can be empty
-                if self._hasDelimiter:
+                if self._delimiter:
                     if self._canLastBeEmpty:
                         del self._parsers[-1]
+                        self._istesting = False
+                        #print 'stop 2'
                         return (True, self._parsers[-1].getEnd() - start)
                     else:
+                        del self._parsers[-2:]
+                        self._istesting = False
+                        #print 'stop 3'
                         return (False, 0)
+                else:
+                    del self._parsers[-1]
+                self._istesting = False
+                #print 'stop 4'
                 return (True, self._parsers[-1].getEnd() - start)
+            p.lookAtParent(self,s)
             # the token had match: try next delimiter
-            if self._hasDelimiter:
+            if self._delimiter:
                 i = p.getEnd()
                 d.match(s,i,end)
                 if not d.hasMatch():
+                    self._istesting = False
+                    del self._parsers[-1]
+                    #print 'stop 5'
                     return (True, i - start)
             if self._maxMatches > 0:
                 if nFound >= self._maxMatches:
+                    self._istesting = False
+                    #print 'stop 6'
                     return False,0
                 nFound += 1
             
             # token and delimiter matched: prepare next iteration
             i = self._parsers[-1].getEnd()
             # clone the token parser
-            p = self._parsers[0].clone() 
+            p = self._token.clone() 
             self.addParser(p)
-            if self._hasDelimiter:
+            if self._delimiter:
                 # clone the delimiter parser
-                d = self._parsers[1].clone() 
+                d = self._delimiter.clone() 
                 self.addParser(d)
                 
+        self._istesting = False
+        print 'stop 7'
+                
     def lastToken(self):
+        n = len(self._parsers)
+        if self._istesting:
+            if self._delimiter:
+                if n < 4:
+                    return None
+                else:
+                    return self._parsers[-4]
+            else:
+                if n < 2:
+                    return None
+                else:
+                    return self._parsers[-2]
+            
         if not self.hasMatch():
             return None
-        if len(self._parsers) < 2:
+        if n == 0 or (n == 1 and self._canMatchEmpty):
             return None
-        elif self._canLastBeEmpty:
-            if self._hasDelimiter:
-                return self._parsers[-2]
-            else:
-                return self._parsers[-1]
-        else:
-            return self._parsers[-2]
+        return self._parsers[-1]
                     
 class AltParser(MultiParser):
     """A set of alternative parsers."""

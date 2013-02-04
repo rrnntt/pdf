@@ -368,52 +368,6 @@ class TestStringParser(unittest.TestCase):
         res = p[0].getMatch(s) + p[2].getMatch(s) + p[4].getMatch(s) + p[6].getMatch(s)
         self.assertEqual(res,'function(x)')
         
-    def test_ListParser(self):
-        
-        p = sp.ListParser( sp.CharParser('a') )
-        s = 'aaab'
-        p.match(s)
-        self.assertTrue(p.hasMatch())
-        self.assertEqual(p.getMatch(s),'aaa')
-        self.assertTrue(p[2] == p.lastToken())
-        
-        p = sp.ListParser( sp.CharParser('a') )
-        p.match('')
-        self.assertFalse(p.hasMatch())
-        
-        # has match if 'zero' argument is True
-        p = sp.ListParser( sp.CharParser('a'), True )
-        s = 'bbb'
-        p.match(s)
-        self.assertTrue(p.hasMatch())
-        self.assertEqual(p.getMatch(s),'')
-        #self.assertTrue(p.lastToken() == None)
-        
-        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
-        s = 'h,e,l,l,o'
-        p.match(s)
-        self.assertTrue(p.hasMatch())
-        self.assertEqual(p.getMatch(s),'h,e,l,l,o')
-        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
-        self.assertEqual(res,'hello')
-        self.assertTrue(p[8] == p.lastToken())
-
-        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
-        s = 'h,e,l,l,o,'
-        p.match(s)
-        self.assertTrue(p.hasMatch())
-        self.assertEqual(p.getMatch(s),'h,e,l,l,o,')
-        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
-        self.assertEqual(res,'hello')
-        # token parser failed on the last empty token doesn't have a match
-        self.assertFalse(p[10].hasMatch())
-        self.assertTrue(p[9] == p.lastToken())
-
-        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(','), False) )
-        s = 'h,e,l,l,o,'
-        p.match(s)
-        self.assertFalse(p.hasMatch())
-                
     def test_AltParser(self):
         
         s = 'hello'
@@ -479,3 +433,115 @@ class TestStringParser(unittest.TestCase):
         self.assertTrue(p.hasMatch())
         self.assertEqual(p.getMatch(s),'Alpha')
         
+class TestListParser(unittest.TestCase):
+    
+    def test_ListParser(self):
+        
+        p = sp.ListParser( sp.CharParser('a') )
+        s = 'aaab'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'aaa')
+        self.assertTrue(p[2] == p.lastToken())
+        self.assertEqual(len(p),3)
+        self.assertTrue(p[-1].hasMatch())
+        
+        p = sp.ListParser( sp.CharParser('a') )
+        p.match('')
+        self.assertFalse(p.hasMatch())
+        self.assertEqual(len(p),0)
+        self.assertEqual(p.lastToken(), None)
+        
+        p = sp.ListParser( sp.CharParser('a'), True )
+        p.match('')
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(len(p),0)
+        self.assertEqual(p.lastToken(), None)
+        
+        # has match if 'zero' argument is True
+        p = sp.ListParser( sp.CharParser('a'), True )
+        s = 'bbb'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'')
+        self.assertEqual(len(p),0)
+        self.assertEqual(p.lastToken(), None)
+        
+        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
+        s = 'h,e,l,l,o'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'h,e,l,l,o')
+        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
+        self.assertEqual(res,'hello')
+        self.assertEqual(len(p),9)
+        self.assertTrue(p[8] == p.lastToken())
+
+        p = sp.ListParser( (sp.CharParser('helo'),sp.CharParser(',')) )
+        s = 'h,e,l,l,o,w'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertTrue(p._canLastBeEmpty)
+        self.assertEqual(p.getMatch(s),'h,e,l,l,o,')
+        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
+        self.assertEqual(res,'hello')
+        self.assertEqual(len(p),11)
+        self.assertTrue(p[10] == p.lastToken()) # shouldn't last token be None? or last good?
+
+        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(',')) )
+        s = 'h,e,l,l,o,'
+        p.match(s)
+        self.assertTrue(p.hasMatch())
+        self.assertEqual(p.getMatch(s),'h,e,l,l,o,')
+        res = p[0].getMatch(s)+p[2].getMatch(s)+p[4].getMatch(s)+p[6].getMatch(s)+p[8].getMatch(s)
+        self.assertEqual(res,'hello')
+        # token parser failed on the last empty token doesn't have a match
+        self.assertEqual(len(p),11)
+        self.assertTrue(p[10] == p.lastToken()) # shouldn't last token be None? or last good?
+
+        p = sp.ListParser( (sp.NotCharParser(','),sp.CharParser(','), False) )
+        s = 'h,e,l,l,o,'
+        p.match(s)
+        self.assertFalse(p.hasMatch())
+        self.assertEqual(p.lastToken(), None)
+        
+    def xtest_lookAtParent(self):
+        
+        class MockParser(sp.CharParser):
+            def __init__(self, s):
+                sp.CharParser.__init__(self, s)
+                
+            def clone(self):
+                return MockParser(self._chars)
+                
+            def lookAtParent(self, parser, s):
+                if isinstance(parser, sp.ListParser):
+                    last = parser.lastToken()
+                    if last:
+                        last.mess = last.getMatch(s)+' is followed by '+self.getMatch(s)+'\n'
+                        #print last.mess
+                        
+        mock = MockParser('abc')
+        p = sp.ListParser( mock )
+        p.match('bca')
+        self.assertEqual( p[0].mess, 'b is followed by c\n' )
+        self.assertEqual( p[1].mess, 'c is followed by a\n' )
+                
+        mock = MockParser('abc')
+        p = sp.ListParser( (mock,sp.CharParser(',')) )
+        p.match('a,b,c')
+        self.assertEqual( p[0].mess, 'a is followed by b\n' )
+        self.assertEqual( p[2].mess, 'b is followed by c\n' )
+        
+        mock = MockParser('abc')
+        p = sp.ListParser( (mock,sp.CharParser(','),True) )
+        p.match('b,a,c')
+        self.assertEqual( p[0].mess, 'b is followed by a\n' )
+        self.assertEqual( p[2].mess, 'a is followed by c\n' )
+        
+        mock = MockParser('abc')
+        p = sp.ListParser( (mock,sp.CharParser(','),True) )
+        p.match('a,c,b,')
+        self.assertEqual( p[0].mess, 'a is followed by c\n' )
+        self.assertEqual( p[2].mess, 'c is followed by b\n' )
+                
