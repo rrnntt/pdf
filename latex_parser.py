@@ -190,15 +190,18 @@ class MathFracParser(LatexParser):
     def _test(self, s, start, end):
         numerator = self.inner_parser()
         denominator = self.inner_parser()
+        nameParser = StringParser('\\frac')
+        nameParser.match(s, start, end)
+        if not nameParser.hasMatch():
+            return (False, 0)
         parser = SeqParser()
-        parser.addParser( StringParser('\\frac') )
         parser.addParser( ZeroOrMoreSpaces() )
         parser.addParser( BracketsParser('{','}',numerator) )
         parser.addParser( ZeroOrMoreSpaces() )
         parser.addParser( BracketsParser('{','}',denominator) )
-        parser.match(s, start, end)
-        if not parser.hasMatch():
-            return (False, 0)
+        parser.match(s, nameParser.getEnd(), end)
+        if not numerator.hasMatch() or not denominator.hasMatch():
+            raise Exception("Error in frac.")
         self.docItem = MathFrac()
         self.docItem.appendItem( numerator.docItem )
         self.docItem.appendItem( denominator.docItem )
@@ -256,6 +259,57 @@ class MathSumParser(LatexParser):
         return (True, parser.getEnd() - start)
     
 #---------------------------------------------------------------------------------
+class MathSubSuperscriptParser(LatexParser):
+    def __init__(self, inner_parser):
+        LatexParser.__init__(self, mode='math-var')
+        self.inner_parser = inner_parser
+
+    def clone(self):
+        """Implement cloning"""
+        return MathSubSuperscriptParser(self.inner_parser)
+    
+    def _test(self, s, start, end):
+        self.subscript = self.inner_parser()
+        self.superscript = self.inner_parser()
+        
+        start1 = start
+        parser = SeqParser()
+        parser.addParser( CharParser('_') )
+        parser.addParser( BracketsParser('{','}',self.subscript) )
+        parser.match(s, start1, end)
+        if parser.hasMatch():
+            start1 = parser.getEnd()
+        parser = SeqParser()
+        parser.addParser( CharParser('^') )
+        parser.addParser( BracketsParser('{','}',self.superscript) )
+        parser.match(s, start1, end)
+        
+        if self.subscript.hasMatch():
+            self.subscript = self.subscript.docItem
+        else:
+            self.subscript = None
+            
+        if self.superscript.hasMatch():
+            self.superscript = self.superscript.docItem
+        else:
+            self.superscript = None
+            
+        if not self.subscript and not self.superscript:
+            raise Exception("Error in subscript or superscript.")
+        return (True, parser.getEnd() - start)
+    
+    def lookAtParent(self, parser, s):
+        baseToken = parser.lastToken()
+        if baseToken:
+            base = baseToken.docItem
+        else:
+            base = MathVariable('')
+        self.docItem = MathSubSuperscript(base,self.subscript,self.superscript)
+        if baseToken:
+            baseToken.docItem = None
+        
+    
+#---------------------------------------------------------------------------------
 class InlineMathItemParser(LatexParser):
     """Parser for an item in a paragraph: a word or a command."""
     def __init__(self, recursion_parser):
@@ -269,6 +323,8 @@ class InlineMathItemParser(LatexParser):
         self.parser.addParser( MathNumberParser() )
         self.parser.addParser( MathFracParser(self.recursion_parser) )
         self.parser.addParser( MathSumParser(self.recursion_parser) )
+        self.parser.addParser( MathSubSuperscriptParser(self.recursion_parser) )
+        self.good = None
         
     def clone(self):
         """Implement cloning"""
@@ -279,12 +335,17 @@ class InlineMathItemParser(LatexParser):
         self.parser.match(s, start, end)
         if not self.parser.hasMatch():
             return (False, 0)
-        good = self.parser.goodParser()
-        if isinstance( good, LatexParser ):
-            self.docItem = good.docItem
+        self.good = self.parser.goodParser()
+        if isinstance( self.good, LatexParser ):
+            self.docItem = self.good.docItem
         else:
             return (False, 0)
         return (True, self.parser.getEnd() - start)
+    
+    def lookAtParent(self, parser, s):
+        if not self.docItem and self.good:
+            self.good.lookAtParent(parser,s)
+            self.docItem = self.good.docItem
     
 #---------------------------------------------------------------------------------
 class InlineMathParser(LatexParser):

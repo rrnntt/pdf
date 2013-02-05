@@ -268,6 +268,17 @@ class TestLatexParsers(unittest.TestCase):
         tester(pdf, r'\prod_{j=1}^{\Omega} (j+1)', 60)
         tester(pdf, r'\prod_{j} (j+1)', 80)
         tester(pdf, r'\prod^{\Omega} (j+1)', 100)
+        tester(pdf, r'x^{y}', 120)
+        tester(pdf, r'1+x_{i}^{j}', 140)
+        tester(pdf, r'\sum_{j}j^{2}',160)
+        #self.assertRaises(Exception, tester(pdf, '\frac{}{}', 170))
+        tester(pdf, r'x^{\sum_{j}j^{2}}',180)
         
         pdf.output('out/latex/test_inline_maths.pdf', 'F')
+        
+#    def test_MathSubSuperscriptParser(self):
+#        pdf = FPDF()
+#        lp.initPDF(pdf)
+#        p = lp.MathSubSuperscriptParser()
+        
         
