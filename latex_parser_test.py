@@ -34,6 +34,21 @@ class TestLatexParsers(unittest.TestCase):
         self.assertEquals( res, u'\u03b1 \u03b2 \u03b3')
         
         pdf.write(0, res)
+        pdf.add_font('djv','','font/DejaVuSans.ttf',uni=True)
+        pdf.set_font('djv','',12)
+        pdf.write(0, u'  \u23a8 \u23a7 \u23a9 \u23aa \u239e \u2320 \u2321 \u23ae')
+        
+        pdf.ln(10)
+        pdf.add_font('smb','','font/Symbola.ttf',uni=True)
+        pdf.set_font('smb','',12)
+        pdf.write(0, u'  \u23b7 \u03b1 \u03b2 \u03b3')
+        
+        pdf.ln(10)
+        pdf.add_font('jax','','font/mathjax_amsregular.ttf',uni=True)
+        pdf.set_font('jax','',12)
+        pdf.write(0, u' abc \u23b7 \u03b1 \u03b2 \u03b3')
+        
+        
         pdf.output('out/latex/test_greek_letters.pdf', 'F')
         
     def test_WordParser(self):
