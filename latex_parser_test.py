@@ -48,6 +48,11 @@ class TestLatexParsers(unittest.TestCase):
         pdf.set_font('jax','',12)
         pdf.write(0, u' abc \u23b7 \u03b1 \u03b2 \u03b3')
         
+        pdf.ln(10)
+        pdf.add_font('jax','','font/MathJax/ttf/mathjax_size1regular.ttf',uni=True)
+        pdf.set_font('jax','',12)
+        pdf.write(0, u' abc \u23b7 \u03b1 \u03b2 \u03b3')
+        
         
         pdf.output('out/latex/test_greek_letters.pdf', 'F')
         
